@@ -218,5 +218,4 @@ mod tests {
         mapper.cpu_write(&ctx, 0x8000, 0x00);
         assert_eq!(mapper.cpu_read(&ctx, 0xC000), Some(0xBB));
     }
-
 }

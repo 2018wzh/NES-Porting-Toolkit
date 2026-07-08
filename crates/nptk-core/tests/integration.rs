@@ -21,8 +21,7 @@ fn make_rom(prg: &[u8]) -> nptk_core::rom::NesRom {
 
 fn make_system(prg: &[u8]) -> NesSystem {
     let rom = make_rom(prg);
-    let mapper = nptk_core::mapper::create_mapper(0, &rom)
-        .expect("Mapper not registered");
+    let mapper = nptk_core::mapper::create_mapper(0, &rom).expect("Mapper not registered");
     let cartridge = nptk_core::mapper::Cartridge::new_simple(
         nptk_core::mapper::CartridgeMetadata {
             mapper_id: 0,

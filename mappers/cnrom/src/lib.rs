@@ -231,5 +231,4 @@ mod tests {
         // PRG 读取应正常工作
         assert!(mapper.cpu_read(&ctx, 0x8000).is_some());
     }
-
 }

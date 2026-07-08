@@ -33,12 +33,12 @@ pub mod prelude {
 //
 // 各 mapper crate 通过 init() 函数显式注册到全局注册表。
 
+#[cfg(feature = "cnrom")]
+use mapper_cnrom::Mapper003Cnrom;
 #[cfg(feature = "nrom")]
 use mapper_nrom::Mapper000Nrom;
 #[cfg(feature = "uxrom")]
 use mapper_uxrom::Mapper002Uxrom;
-#[cfg(feature = "cnrom")]
-use mapper_cnrom::Mapper003Cnrom;
 
 /// 初始化 mapper 注册表
 ///

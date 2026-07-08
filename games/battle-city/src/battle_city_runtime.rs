@@ -13,8 +13,8 @@ pub struct BattleCityRuntime {
 
 impl BattleCityRuntime {
     pub fn new(rom: NesRom) -> Result<Self, Box<dyn std::error::Error>> {
-        let mapper = nptk::mapper::create_mapper(rom.header.mapper_id, &rom)
-            .expect("Mapper not registered");
+        let mapper =
+            nptk::mapper::create_mapper(rom.header.mapper_id, &rom).expect("Mapper not registered");
         let cartridge = Cartridge::new_simple(
             CartridgeMetadata {
                 mapper_id: rom.header.mapper_id,
@@ -61,8 +61,8 @@ mod tests {
     }
 
     fn make_cartridge(rom: &NesRom) -> Cartridge {
-        let mapper = nptk::mapper::create_mapper(rom.header.mapper_id, rom)
-            .expect("Mapper not registered");
+        let mapper =
+            nptk::mapper::create_mapper(rom.header.mapper_id, rom).expect("Mapper not registered");
         Cartridge::new_simple(
             CartridgeMetadata {
                 mapper_id: rom.header.mapper_id,

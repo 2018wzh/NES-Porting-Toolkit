@@ -203,5 +203,4 @@ mod tests {
         assert_eq!(mapper.ppu_read(&ctx, 0x0000), Some(0x01));
         assert_eq!(mapper.ppu_read(&ctx, 0x0001), Some(0x02));
     }
-
 }

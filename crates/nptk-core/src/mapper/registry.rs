@@ -72,14 +72,48 @@ mod tests {
             construct: |_rom| {
                 struct TestMapper;
                 impl MapperChip for TestMapper {
-                    fn mapper_id(&self) -> u16 { 999 }
-                    fn name(&self) -> &'static str { "TestMapper" }
-                    fn cpu_read(&mut self, _ctx: &std::rc::Rc<std::cell::RefCell<crate::mapper::MapperContext>>, _addr: u16) -> Option<u8> { None }
-                    fn cpu_write(&mut self, _ctx: &std::rc::Rc<std::cell::RefCell<crate::mapper::MapperContext>>, _addr: u16, _value: u8) -> bool { false }
-                    fn ppu_read(&mut self, _ctx: &std::rc::Rc<std::cell::RefCell<crate::mapper::MapperContext>>, _addr: u16) -> Option<u8> { None }
-                    fn ppu_write(&mut self, _ctx: &std::rc::Rc<std::cell::RefCell<crate::mapper::MapperContext>>, _addr: u16, _value: u8) -> bool { false }
-                    fn mirroring(&self) -> crate::rom::Mirroring { crate::rom::Mirroring::Horizontal }
-                    fn save_state(&self) -> crate::mapper::MapperSaveState { crate::mapper::MapperSaveState::new(0) }
+                    fn mapper_id(&self) -> u16 {
+                        999
+                    }
+                    fn name(&self) -> &'static str {
+                        "TestMapper"
+                    }
+                    fn cpu_read(
+                        &mut self,
+                        _ctx: &std::rc::Rc<std::cell::RefCell<crate::mapper::MapperContext>>,
+                        _addr: u16,
+                    ) -> Option<u8> {
+                        None
+                    }
+                    fn cpu_write(
+                        &mut self,
+                        _ctx: &std::rc::Rc<std::cell::RefCell<crate::mapper::MapperContext>>,
+                        _addr: u16,
+                        _value: u8,
+                    ) -> bool {
+                        false
+                    }
+                    fn ppu_read(
+                        &mut self,
+                        _ctx: &std::rc::Rc<std::cell::RefCell<crate::mapper::MapperContext>>,
+                        _addr: u16,
+                    ) -> Option<u8> {
+                        None
+                    }
+                    fn ppu_write(
+                        &mut self,
+                        _ctx: &std::rc::Rc<std::cell::RefCell<crate::mapper::MapperContext>>,
+                        _addr: u16,
+                        _value: u8,
+                    ) -> bool {
+                        false
+                    }
+                    fn mirroring(&self) -> crate::rom::Mirroring {
+                        crate::rom::Mirroring::Horizontal
+                    }
+                    fn save_state(&self) -> crate::mapper::MapperSaveState {
+                        crate::mapper::MapperSaveState::new(0)
+                    }
                     fn load_state(&mut self, _state: &crate::mapper::MapperSaveState) {}
                 }
                 Box::new(TestMapper)

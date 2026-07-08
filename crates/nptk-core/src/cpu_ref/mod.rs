@@ -1280,8 +1280,7 @@ mod tests {
         data[vec_base + 2] = reset_vec as u8;
         data[vec_base + 3] = (reset_vec >> 8) as u8;
         let rom = crate::rom::parse_rom(&data).unwrap();
-        let mapper = crate::mapper::create_mapper(0, &rom)
-            .expect("Mapper not registered");
+        let mapper = crate::mapper::create_mapper(0, &rom).expect("Mapper not registered");
         let cartridge = crate::mapper::Cartridge::new_simple(
             crate::mapper::CartridgeMetadata {
                 mapper_id: 0,
