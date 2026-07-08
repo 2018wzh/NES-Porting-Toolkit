@@ -2,7 +2,7 @@
 //!
 //! 将重编译代码中的关键地址标记为 Hook，用于 GameProfile 标注。
 
-use nptk_profile::hooks::{CodeHook, HookConfig, HookType};
+use nptk::profile::{CodeHook, HookConfig, HookType};
 
 /// 获取 Battle City 的 Hook 配置
 pub fn get_hooks() -> HookConfig {

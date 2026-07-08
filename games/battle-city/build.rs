@@ -1,12 +1,11 @@
 //! Battle City — 构建时 AOT 编译（静态链接）
 //!
 //! 在 cargo build 时自动读取 ROM，通过 Cranelift 编译为原生目标文件 (.o)，
-//! 打包为静态库 (.a)，然后静态链接到最终二进制。
+//! 使用 `cc` crate 直接链接 .o 文件到最终二进制。
 //! Cranelift 生成的代码通过 `extern "C"` 函数 `nes_read8`/`nes_write8` 访问 NES 内存，
 //! 这些函数由 `nptk-native-runtime` crate 提供。
 
 use std::path::Path;
-use std::process::Command;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 通过环境变量 NES_AOT=0 可禁用
@@ -28,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 读取并解析 ROM
     let rom_data = std::fs::read(&rom_path)?;
-    let rom = match nptk_core::rom::parse_rom(&rom_data) {
+    let rom = match nptk::rom::parse_rom(&rom_data) {
         Ok(r) => r,
         Err(e) => {
             println!("cargo:warning=Failed to parse ROM: {}. AOT disabled.", e);
@@ -160,11 +159,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // 使用 Cranelift AOT 编译
-    let mut aot = nptk_recompiler::codegen::CraneliftAot::new()
-        .map_err(|e| format!("CraneliftAot::new: {}", e))?;
+    let mut aot =
+        nptk::build::CraneliftAot::new().map_err(|e| format!("CraneliftAot::new: {}", e))?;
 
     for &(addr, ref bytes) in &block_data {
-        let ir_ops = nptk_recompiler::ir_builder::IrBuilder::lift_block(bytes, addr);
+        let ir_ops = nptk::build::IrBuilder::lift_block(bytes, addr);
         aot.compile_block(addr, &ir_ops)
             .map_err(|e| format!("compile block ${:04X}: {}", addr, e))?;
     }
@@ -184,38 +183,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let obj_path = target_dir.join("nes_blocks_battle_city.o");
     std::fs::write(&obj_path, &obj_bytes).map_err(|e| format!("write .o: {}", e))?;
 
-    // 打包为静态库 (.a)
+    // 使用 `cc` crate 直接链接 .o 文件到最终二进制
+    // cc crate 自动处理跨平台编译器检测（GCC/Clang/MSVC），
+    // 无需手动调用 ar/lib.exe。
     // Cranelift 生成的 .o 引用了 nes_read8/nes_write8 外部符号，
     // 这些符号由 nptk-native-runtime crate 提供（#[no_mangle] extern "C"）。
-    // 静态链接时，链接器会从 nptk-native-runtime 中解析这些符号。
-    let lib_path = target_dir.join("libnes_blocks_battle_city.a");
-    let ar_result = Command::new("ar")
-        .args(&["crs"])
-        .arg(&lib_path)
-        .arg(&obj_path)
-        .output();
-
-    if let Ok(output) = ar_result {
-        if output.status.success() {
-            println!(
-                "cargo:warning=Static library created: {}",
-                lib_path.display()
-            );
-            // 告诉 cargo 链接到这个静态库
-            println!("cargo:rustc-link-search={}", target_dir.display());
-            println!("cargo:rustc-link-lib=static=nes_blocks_battle_city");
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            println!(
-                "cargo:warning=ar failed: {}. Trying MSVC lib.exe...",
-                stderr
-            );
-            try_msvc_lib(&obj_path, &lib_path);
-        }
-    } else {
-        println!("cargo:warning=ar not found. Trying MSVC lib.exe...");
-        try_msvc_lib(&obj_path, &lib_path);
-    }
+    // 链接器会从 nptk-native-runtime 中自动解析这些符号。
+    cc::Build::new()
+        .object(&obj_path)
+        .compile("nes_blocks_battle_city");
 
     // 生成 Rust 绑定代码（静态 extern 声明 + dispatch 表）
     let bindings = generate_bindings(&compiled_blocks, &block_names);
@@ -223,38 +199,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::write(&bindings_path, &bindings).map_err(|e| format!("write bindings: {}", e))?;
 
     println!(
-        "cargo:warning=AOT compilation complete: {} blocks statically linked",
+        "cargo:warning=AOT compilation complete: {} blocks statically linked via cc crate",
         compiled_blocks.len()
     );
     Ok(())
-}
-
-/// 尝试 MSVC lib.exe 创建静态库
-fn try_msvc_lib(obj_path: &Path, lib_path: &Path) {
-    if let Ok(output) = Command::new("lib.exe")
-        .args(&["/NOLOGO", "/OUT:"])
-        .arg(lib_path)
-        .arg(obj_path)
-        .output()
-    {
-        if output.status.success() {
-            println!("cargo:warning=Static library created with MSVC lib.exe");
-            return;
-        }
-    }
-    // 如果 ar 和 lib.exe 都失败，直接链接 .o 文件
-    println!("cargo:warning=Static library creation failed. Linking .o directly.");
-    println!(
-        "cargo:rustc-link-search={}",
-        obj_path.parent().unwrap().display()
-    );
-    // 对于 GCC 链接器，可以直接链接 .o
-    if cfg!(target_os = "windows") {
-        // 在 Windows 上，尝试将 .o 重命名为 .obj 并链接
-        let obj_renamed = obj_path.with_extension("obj");
-        let _ = std::fs::copy(obj_path, &obj_renamed);
-        println!("cargo:rustc-link-lib=nes_blocks_battle_city.obj");
-    }
 }
 
 /// 查找 ROM 文件
@@ -292,22 +240,22 @@ fn find_rom() -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
 ///
 /// 这些符号在链接时从 .a 静态库中解析。
 fn generate_bindings(
-    blocks: &[nptk_recompiler::codegen::CompiledBlock],
+    blocks: &[nptk::build::CompiledBlock],
     _block_names: &std::collections::HashMap<u16, String>,
 ) -> String {
     let mut src = String::new();
     src.push_str("// Auto-generated bindings for recompiled NES blocks\n");
     src.push_str("// Statically linked via build.rs\n\n");
 
-    src.push_str("use nptk_native_runtime::runtime::CAbiBlockFn;\n");
-    src.push_str("use nptk_native_runtime::runtime::NativeCpuState;\n");
-    src.push_str("use nptk_core::bus::NesBusImpl;\n\n");
+    src.push_str("use nptk::runtime::CAbiBlockFn;\n");
+    src.push_str("use nptk::runtime::NativeCpuState;\n");
+    src.push_str("use nptk::bus::NesBusImpl;\n\n");
 
     // 为每个块生成 extern "C" 声明
     src.push_str("// ── Extern function declarations (from Cranelift AOT .a) ──\n");
     for block in blocks {
         src.push_str(&format!(
-            "unsafe extern \"C\" {{ pub fn {}(bus: *mut NesBusImpl, cpu: *mut NativeCpuState) -> u32; }}\n",
+            "#[allow(improper_ctypes)]\n\nunsafe extern \"C\" {{ pub fn {}(bus: *mut NesBusImpl, cpu: *mut NativeCpuState) -> u32; }}\n",
             block.name
         ));
     }

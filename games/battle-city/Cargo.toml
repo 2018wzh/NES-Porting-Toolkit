@@ -15,21 +15,8 @@ path = "src/lib.rs"
 [dependencies]
 serde.workspace = true
 tracing.workspace = true
-winit.workspace = true
-wgpu.workspace = true
-pollster.workspace = true
-egui.workspace = true
-egui-wgpu.workspace = true
-egui-winit.workspace = true
-cpal.workspace = true
-gilrs.workspace = true
-nptk-core = { path = "../../crates/nptk-core" }
-nptk-profile = { path = "../../crates/nptk-profile" }
-nptk-native-runtime = { path = "../../crates/nptk-native-runtime" }
-nptk-wgpu = { path = "../../crates/nptk-wgpu" }
-nptk-audio = { path = "../../crates/nptk-audio" }
-nptk-input = { path = "../../crates/nptk-input" }
+nptk = { path = "../../crates/nptk" }
 
 [build-dependencies]
-nptk-core = { path = "../../crates/nptk-core" }
-nptk-recompiler = { path = "../../crates/nptk-recompiler" }
+cc.workspace = true
+nptk = { path = "../../crates/nptk", features = ["build"] }

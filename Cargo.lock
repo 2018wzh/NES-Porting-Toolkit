@@ -2286,6 +2286,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0676bb32a98c1a483ce53e500a81ad9c3d5b3f7c920c28c24e9cb0980d0b5bc8"
 
 [[package]]
+name = "nptk"
+version = "0.1.0"
+dependencies = [
+ "nptk-app",
+ "nptk-audio",
+ "nptk-core",
+ "nptk-input",
+ "nptk-native-runtime",
+ "nptk-profile",
+ "nptk-recompiler",
+ "nptk-wgpu",
+]
+
+[[package]]
+name = "nptk-app"
+version = "0.1.0"
+dependencies = [
+ "cpal",
+ "egui",
+ "egui-wgpu",
+ "egui-winit",
+ "gilrs",
+ "nptk-audio",
+ "nptk-core",
+ "nptk-input",
+ "nptk-native-runtime",
+ "nptk-wgpu",
+ "pollster",
+ "tracing",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
 name = "nptk-audio"
 version = "0.1.0"
 dependencies = [
@@ -2299,23 +2333,10 @@ dependencies = [
 name = "nptk-battle-city"
 version = "0.1.0"
 dependencies = [
- "cpal",
- "egui",
- "egui-wgpu",
- "egui-winit",
- "gilrs",
- "nptk-audio",
- "nptk-core",
- "nptk-input",
- "nptk-native-runtime",
- "nptk-profile",
- "nptk-recompiler",
- "nptk-wgpu",
- "pollster",
+ "cc",
+ "nptk",
  "serde",
  "tracing",
- "wgpu",
- "winit",
 ]
 
 [[package]]

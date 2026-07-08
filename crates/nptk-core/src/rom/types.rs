@@ -2,6 +2,7 @@
 //! 定义 iNES / NES 2.0 header 结构和镜像模式等
 
 /// 镜像模式
+#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mirroring {
     Horizontal,
@@ -16,6 +17,7 @@ pub enum Mirroring {
 }
 
 /// ROM 格式
+#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RomFormat {
     Ines,

@@ -1,0 +1,20 @@
+[package]
+name = "nptk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "NES Porting Toolkit — facade crate for game porting"
+
+[dependencies]
+nptk-core = { path = "../nptk-core" }
+nptk-profile = { path = "../nptk-profile" }
+nptk-native-runtime = { path = "../nptk-native-runtime" }
+nptk-app = { path = "../nptk-app" }
+nptk-wgpu = { path = "../nptk-wgpu" }
+nptk-audio = { path = "../nptk-audio" }
+nptk-input = { path = "../nptk-input" }
+nptk-recompiler = { path = "../nptk-recompiler", optional = true }
+
+[features]
+default = ["build"]
+build = ["nptk-recompiler"]

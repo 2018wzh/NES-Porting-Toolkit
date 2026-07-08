@@ -9,6 +9,8 @@
 use std::vec::Vec;
 
 /// APU 兼容实现
+#[repr(C)]
+#[allow(unused)]
 pub struct ApuCompat {
     // 寄存器
     regs: [u8; 0x18], // $4000-$4017

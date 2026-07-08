@@ -2,19 +2,19 @@
 //! 组合 nptk-core 与各个原生子系统
 
 use crate::game_state::BattleCityStateView;
-use nptk_core::mapper::{Cartridge, CartridgeMetadata, ChrStorage};
-use nptk_core::rom::NesRom;
+use nptk::mapper::{Cartridge, CartridgeMetadata, ChrStorage};
+use nptk::rom::NesRom;
 
 /// Battle City 原生移植运行时
 pub struct BattleCityRuntime {
-    pub bus: nptk_core::bus::NesBusImpl,
+    pub bus: nptk::bus::NesBusImpl,
     _rom: NesRom,
 }
 
 impl BattleCityRuntime {
     pub fn new(rom: NesRom) -> Result<Self, Box<dyn std::error::Error>> {
-        let mapper = nptk_core::mapper::create_mapper(rom.header.mapper_id, &rom)
-            .unwrap_or_else(|| nptk_core::mapper::registry::builtin_nrom(&rom));
+        let mapper = nptk::mapper::create_mapper(rom.header.mapper_id, &rom)
+            .unwrap_or_else(|| nptk::mapper::registry::builtin_nrom(&rom));
         let cartridge = Cartridge::new_simple(
             CartridgeMetadata {
                 mapper_id: rom.header.mapper_id,
@@ -31,7 +31,7 @@ impl BattleCityRuntime {
         );
 
         Ok(Self {
-            bus: nptk_core::bus::NesBusImpl::new(cartridge),
+            bus: nptk::bus::NesBusImpl::new(cartridge),
             _rom: rom,
         })
     }
@@ -51,18 +51,18 @@ impl BattleCityRuntime {
 mod tests {
     use super::*;
 
-    use nptk_core::bus::NesBus;
+    use nptk::bus::NesBus;
     fn make_test_rom() -> NesRom {
         let mut data = vec![0u8; 16 + 16384 + 8192];
         data[0..4].copy_from_slice(b"NES\x1a");
         data[4] = 1;
         data[5] = 1;
-        nptk_core::rom::parse_rom(&data).unwrap()
+        nptk::rom::parse_rom(&data).unwrap()
     }
 
     fn make_cartridge(rom: &NesRom) -> Cartridge {
-        let mapper = nptk_core::mapper::create_mapper(rom.header.mapper_id, rom)
-            .unwrap_or_else(|| nptk_core::mapper::registry::builtin_nrom(rom));
+        let mapper = nptk::mapper::create_mapper(rom.header.mapper_id, rom)
+            .unwrap_or_else(|| nptk::mapper::registry::builtin_nrom(rom));
         Cartridge::new_simple(
             CartridgeMetadata {
                 mapper_id: rom.header.mapper_id,
@@ -114,7 +114,7 @@ mod tests {
     fn load_battle_city_rom() -> Option<NesRom> {
         let path = "roms/BattleCity (Japan).nes";
         let data = std::fs::read(path).ok()?;
-        nptk_core::rom::parse_rom(&data).ok()
+        nptk::rom::parse_rom(&data).ok()
     }
 
     #[test]
@@ -129,7 +129,7 @@ mod tests {
         assert_eq!(rom.header.mapper_id, 0);
         assert_eq!(rom.header.prg_rom_size, 16384);
         assert_eq!(rom.header.chr_rom_size, 8192);
-        assert_eq!(rom.header.mirroring, nptk_core::rom::Mirroring::Horizontal);
+        assert_eq!(rom.header.mirroring, nptk::rom::Mirroring::Horizontal);
     }
 
     #[test]
@@ -140,8 +140,8 @@ mod tests {
         };
 
         let cart = make_cartridge(&rom);
-        let bus = nptk_core::bus::NesBusImpl::new(cart);
-        let mut system = nptk_core::system::NesSystem::new(bus);
+        let bus = nptk::bus::NesBusImpl::new(cart);
+        let mut system = nptk::system::NesSystem::new(bus);
 
         // Run enough frames to reach title screen (typically 120+ frames)
         let mut hashes: Vec<u64> = Vec::new();
@@ -176,8 +176,8 @@ mod tests {
         // Run two independent NES instances and compare frame hashes
         let run_frames = |count: u32| -> Vec<u64> {
             let cart = make_cartridge(&rom);
-            let bus = nptk_core::bus::NesBusImpl::new(cart);
-            let mut system = nptk_core::system::NesSystem::new(bus);
+            let bus = nptk::bus::NesBusImpl::new(cart);
+            let mut system = nptk::system::NesSystem::new(bus);
             let mut hashes = Vec::new();
             for _ in 0..count {
                 let fb = system.run_frame();
@@ -204,8 +204,8 @@ mod tests {
         };
 
         let cart = make_cartridge(&rom);
-        let bus = nptk_core::bus::NesBusImpl::new(cart);
-        let mut system = nptk_core::system::NesSystem::new(bus);
+        let bus = nptk::bus::NesBusImpl::new(cart);
+        let mut system = nptk::system::NesSystem::new(bus);
 
         // Run 180 frames (~3 seconds) to reach title screen
         for _ in 0..180 {
