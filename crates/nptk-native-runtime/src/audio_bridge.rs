@@ -10,7 +10,10 @@ pub struct AudioBridge {
 
 impl AudioBridge {
     pub fn new() -> Self {
-        AudioBridge { sample_tx: None, buffer: Vec::new() }
+        AudioBridge {
+            sample_tx: None,
+            buffer: Vec::new(),
+        }
     }
 
     pub fn set_output(&mut self, tx: mpsc::Sender<f32>) {
@@ -32,5 +35,7 @@ impl AudioEventSink for AudioBridge {
 }
 
 impl Default for AudioBridge {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }

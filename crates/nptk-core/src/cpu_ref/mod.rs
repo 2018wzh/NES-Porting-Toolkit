@@ -44,8 +44,11 @@ impl CpuFlags {
 
 #[derive(Debug, Clone)]
 pub struct Cpu6502 {
-    pub a: u8, pub x: u8, pub y: u8,
-    pub sp: u8, pub pc: u16,
+    pub a: u8,
+    pub x: u8,
+    pub y: u8,
+    pub sp: u8,
+    pub pc: u16,
     pub status: CpuFlags,
     pub cycles: u64,
     pub nmi_pending: bool,
@@ -53,7 +56,16 @@ pub struct Cpu6502 {
 
 impl Cpu6502 {
     pub fn new() -> Self {
-        Self { a:0, x:0, y:0, sp:0xFD, pc:0, status:CpuFlags::default(), cycles:0, nmi_pending:false }
+        Self {
+            a: 0,
+            x: 0,
+            y: 0,
+            sp: 0xFD,
+            pc: 0,
+            status: CpuFlags::default(),
+            cycles: 0,
+            nmi_pending: false,
+        }
     }
 
     pub fn reset(&mut self, bus: &mut dyn NesBus) {
@@ -90,214 +102,1147 @@ impl Cpu6502 {
         let mut pc = self.pc;
         let mut sp = self.sp;
 
-        macro_rules! imm { () => {{ let v=bus.cpu_read(pc); pc=pc.wrapping_add(1); v }}; }
-        macro_rules! abs { () => {{ let lo=bus.cpu_read(pc)as u16;let hi=bus.cpu_read(pc.wrapping_add(1))as u16;pc=pc.wrapping_add(2);lo|(hi<<8) }}; }
-        macro_rules! abx { () => {{ let b=abs!();b.wrapping_add(self.x as u16) }}; }
-        macro_rules! aby { () => {{ let b=abs!();b.wrapping_add(self.y as u16) }}; }
-        macro_rules! zp  { () => {{ let a=bus.cpu_read(pc)as u16;pc=pc.wrapping_add(1);a }}; }
-        macro_rules! zpx { () => {{ let a=bus.cpu_read(pc).wrapping_add(self.x)as u16;pc=pc.wrapping_add(1);a }}; }
-        macro_rules! zpy { () => {{ let a=bus.cpu_read(pc).wrapping_add(self.y)as u16;pc=pc.wrapping_add(1);a }}; }
-        macro_rules! izx { () => {{ let z=bus.cpu_read(pc).wrapping_add(self.x);pc=pc.wrapping_add(1);let lo=bus.cpu_read(z as u16)as u16;let hi=bus.cpu_read(z.wrapping_add(1)as u16)as u16;lo|(hi<<8) }}; }
-        macro_rules! izy { () => {{ let z=bus.cpu_read(pc);pc=pc.wrapping_add(1);let lo=bus.cpu_read(z as u16)as u16;let hi=bus.cpu_read(z.wrapping_add(1)as u16)as u16;(lo|(hi<<8)).wrapping_add(self.y as u16) }}; }
-        macro_rules! ind { () => {{ let lo=bus.cpu_read(pc)as u16;let hi=bus.cpu_read(pc.wrapping_add(1))as u16;pc=pc.wrapping_add(2);let ptr=lo|(hi<<8);let alo=bus.cpu_read(ptr)as u16;let ahi=bus.cpu_read(ptr.wrapping_add(1))as u16;alo|(ahi<<8) }}; }
+        macro_rules! imm {
+            () => {{
+                let v = bus.cpu_read(pc);
+                pc = pc.wrapping_add(1);
+                v
+            }};
+        }
+        macro_rules! abs {
+            () => {{
+                let lo = bus.cpu_read(pc) as u16;
+                let hi = bus.cpu_read(pc.wrapping_add(1)) as u16;
+                pc = pc.wrapping_add(2);
+                lo | (hi << 8)
+            }};
+        }
+        macro_rules! abx {
+            () => {{
+                let b = abs!();
+                b.wrapping_add(self.x as u16)
+            }};
+        }
+        macro_rules! aby {
+            () => {{
+                let b = abs!();
+                b.wrapping_add(self.y as u16)
+            }};
+        }
+        macro_rules! zp {
+            () => {{
+                let a = bus.cpu_read(pc) as u16;
+                pc = pc.wrapping_add(1);
+                a
+            }};
+        }
+        macro_rules! zpx {
+            () => {{
+                let a = bus.cpu_read(pc).wrapping_add(self.x) as u16;
+                pc = pc.wrapping_add(1);
+                a
+            }};
+        }
+        macro_rules! zpy {
+            () => {{
+                let a = bus.cpu_read(pc).wrapping_add(self.y) as u16;
+                pc = pc.wrapping_add(1);
+                a
+            }};
+        }
+        macro_rules! izx {
+            () => {{
+                let z = bus.cpu_read(pc).wrapping_add(self.x);
+                pc = pc.wrapping_add(1);
+                let lo = bus.cpu_read(z as u16) as u16;
+                let hi = bus.cpu_read(z.wrapping_add(1) as u16) as u16;
+                lo | (hi << 8)
+            }};
+        }
+        macro_rules! izy {
+            () => {{
+                let z = bus.cpu_read(pc);
+                pc = pc.wrapping_add(1);
+                let lo = bus.cpu_read(z as u16) as u16;
+                let hi = bus.cpu_read(z.wrapping_add(1) as u16) as u16;
+                (lo | (hi << 8)).wrapping_add(self.y as u16)
+            }};
+        }
+        macro_rules! ind {
+            () => {{
+                let lo = bus.cpu_read(pc) as u16;
+                let hi = bus.cpu_read(pc.wrapping_add(1)) as u16;
+                pc = pc.wrapping_add(2);
+                let ptr = lo | (hi << 8);
+                let alo = bus.cpu_read(ptr) as u16;
+                let ahi = bus.cpu_read(ptr.wrapping_add(1)) as u16;
+                alo | (ahi << 8)
+            }};
+        }
 
         let result = match op {
-            0x00 => { pc=pc.wrapping_add(1); bus.cpu_write(0x0100|sp as u16,(pc>>8)as u8);sp=sp.wrapping_sub(1);bus.cpu_write(0x0100|sp as u16,pc as u8);sp=sp.wrapping_sub(1);bus.cpu_write(0x0100|sp as u16,self.status.to_byte()|0x10);sp=sp.wrapping_sub(1);self.status.interrupt_disable=true;let lo=bus.cpu_read(0xFFFE)as u16;let hi=bus.cpu_read(0xFFFF)as u16;self.pc=lo|(hi<<8);7 }
-            0x01 => { let a=izx!();self.a|=bus.cpu_read(a);self.status.set_zn(self.a);6 }
-            0x05 => { let a=zp!();self.a|=bus.cpu_read(a);self.status.set_zn(self.a);3 }
-            0x06 => { let a=zp!();let v=bus.cpu_read(a);bus.cpu_write(a,v<<1);self.status.carry=v&0x80!=0;self.status.set_zn(v<<1);5 }
-            0x08 => { bus.cpu_write(0x0100|sp as u16,self.status.to_byte()|0x10);sp=sp.wrapping_sub(1);3 }
-            0x09 => { self.a|=imm!();self.status.set_zn(self.a);2 }
-            0x0A => { self.status.carry=self.a&0x80!=0;self.a<<=1;self.status.set_zn(self.a);2 }
-            0x0D => { let a=abs!();self.a|=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0x0E => { let a=abs!();let v=bus.cpu_read(a);bus.cpu_write(a,v<<1);self.status.carry=v&0x80!=0;self.status.set_zn(v<<1);6 }
+            0x00 => {
+                pc = pc.wrapping_add(1);
+                bus.cpu_write(0x0100 | sp as u16, (pc >> 8) as u8);
+                sp = sp.wrapping_sub(1);
+                bus.cpu_write(0x0100 | sp as u16, pc as u8);
+                sp = sp.wrapping_sub(1);
+                bus.cpu_write(0x0100 | sp as u16, self.status.to_byte() | 0x10);
+                sp = sp.wrapping_sub(1);
+                self.status.interrupt_disable = true;
+                let lo = bus.cpu_read(0xFFFE) as u16;
+                let hi = bus.cpu_read(0xFFFF) as u16;
+                self.pc = lo | (hi << 8);
+                7
+            }
+            0x01 => {
+                let a = izx!();
+                self.a |= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                6
+            }
+            0x05 => {
+                let a = zp!();
+                self.a |= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                3
+            }
+            0x06 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                bus.cpu_write(a, v << 1);
+                self.status.carry = v & 0x80 != 0;
+                self.status.set_zn(v << 1);
+                5
+            }
+            0x08 => {
+                bus.cpu_write(0x0100 | sp as u16, self.status.to_byte() | 0x10);
+                sp = sp.wrapping_sub(1);
+                3
+            }
+            0x09 => {
+                self.a |= imm!();
+                self.status.set_zn(self.a);
+                2
+            }
+            0x0A => {
+                self.status.carry = self.a & 0x80 != 0;
+                self.a <<= 1;
+                self.status.set_zn(self.a);
+                2
+            }
+            0x0D => {
+                let a = abs!();
+                self.a |= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x0E => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                bus.cpu_write(a, v << 1);
+                self.status.carry = v & 0x80 != 0;
+                self.status.set_zn(v << 1);
+                6
+            }
 
             // LDA
-            0xA9 => { self.a=imm!();self.status.set_zn(self.a);2 }
-            0xA5 => { let a=zp!();self.a=bus.cpu_read(a);self.status.set_zn(self.a);3 }
-            0xB5 => { let a=zpx!();self.a=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0xAD => { let a=abs!();self.a=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0xBD => { let a=abx!();self.a=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0xB9 => { let a=aby!();self.a=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0xA1 => { let a=izx!();self.a=bus.cpu_read(a);self.status.set_zn(self.a);6 }
-            0xB1 => { let a=izy!();self.a=bus.cpu_read(a);self.status.set_zn(self.a);5 }
+            0xA9 => {
+                self.a = imm!();
+                self.status.set_zn(self.a);
+                2
+            }
+            0xA5 => {
+                let a = zp!();
+                self.a = bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                3
+            }
+            0xB5 => {
+                let a = zpx!();
+                self.a = bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0xAD => {
+                let a = abs!();
+                self.a = bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0xBD => {
+                let a = abx!();
+                self.a = bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0xB9 => {
+                let a = aby!();
+                self.a = bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0xA1 => {
+                let a = izx!();
+                self.a = bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                6
+            }
+            0xB1 => {
+                let a = izy!();
+                self.a = bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                5
+            }
 
             // STA
-            0x85 => { let a=zp!();bus.cpu_write(a,self.a);3 }
-            0x95 => { let a=zpx!();bus.cpu_write(a,self.a);4 }
-            0x8D => { let a=abs!();bus.cpu_write(a,self.a);4 }
-            0x9D => { let a=abx!();bus.cpu_write(a,self.a);5 }
-            0x99 => { let a=aby!();bus.cpu_write(a,self.a);5 }
-            0x81 => { let a=izx!();bus.cpu_write(a,self.a);6 }
-            0x91 => { let a=izy!();bus.cpu_write(a,self.a);6 }
+            0x85 => {
+                let a = zp!();
+                bus.cpu_write(a, self.a);
+                3
+            }
+            0x95 => {
+                let a = zpx!();
+                bus.cpu_write(a, self.a);
+                4
+            }
+            0x8D => {
+                let a = abs!();
+                bus.cpu_write(a, self.a);
+                4
+            }
+            0x9D => {
+                let a = abx!();
+                bus.cpu_write(a, self.a);
+                5
+            }
+            0x99 => {
+                let a = aby!();
+                bus.cpu_write(a, self.a);
+                5
+            }
+            0x81 => {
+                let a = izx!();
+                bus.cpu_write(a, self.a);
+                6
+            }
+            0x91 => {
+                let a = izy!();
+                bus.cpu_write(a, self.a);
+                6
+            }
 
             // LDX
-            0xA2 => { self.x=imm!();self.status.set_zn(self.x);2 }
-            0xA6 => { let a=zp!();self.x=bus.cpu_read(a);self.status.set_zn(self.x);3 }
-            0xB6 => { let a=zpy!();self.x=bus.cpu_read(a);self.status.set_zn(self.x);4 }
-            0xAE => { let a=abs!();self.x=bus.cpu_read(a);self.status.set_zn(self.x);4 }
-            0xBE => { let a=aby!();self.x=bus.cpu_read(a);self.status.set_zn(self.x);4 }
+            0xA2 => {
+                self.x = imm!();
+                self.status.set_zn(self.x);
+                2
+            }
+            0xA6 => {
+                let a = zp!();
+                self.x = bus.cpu_read(a);
+                self.status.set_zn(self.x);
+                3
+            }
+            0xB6 => {
+                let a = zpy!();
+                self.x = bus.cpu_read(a);
+                self.status.set_zn(self.x);
+                4
+            }
+            0xAE => {
+                let a = abs!();
+                self.x = bus.cpu_read(a);
+                self.status.set_zn(self.x);
+                4
+            }
+            0xBE => {
+                let a = aby!();
+                self.x = bus.cpu_read(a);
+                self.status.set_zn(self.x);
+                4
+            }
 
             // STX
-            0x86 => { let a=zp!();bus.cpu_write(a,self.x);3 }
-            0x96 => { let a=zpy!();bus.cpu_write(a,self.x);4 }
-            0x8E => { let a=abs!();bus.cpu_write(a,self.x);4 }
+            0x86 => {
+                let a = zp!();
+                bus.cpu_write(a, self.x);
+                3
+            }
+            0x96 => {
+                let a = zpy!();
+                bus.cpu_write(a, self.x);
+                4
+            }
+            0x8E => {
+                let a = abs!();
+                bus.cpu_write(a, self.x);
+                4
+            }
 
             // LDY
-            0xA0 => { self.y=imm!();self.status.set_zn(self.y);2 }
-            0xA4 => { let a=zp!();self.y=bus.cpu_read(a);self.status.set_zn(self.y);3 }
-            0xB4 => { let a=zpx!();self.y=bus.cpu_read(a);self.status.set_zn(self.y);4 }
-            0xAC => { let a=abs!();self.y=bus.cpu_read(a);self.status.set_zn(self.y);4 }
-            0xBC => { let a=abx!();self.y=bus.cpu_read(a);self.status.set_zn(self.y);4 }
+            0xA0 => {
+                self.y = imm!();
+                self.status.set_zn(self.y);
+                2
+            }
+            0xA4 => {
+                let a = zp!();
+                self.y = bus.cpu_read(a);
+                self.status.set_zn(self.y);
+                3
+            }
+            0xB4 => {
+                let a = zpx!();
+                self.y = bus.cpu_read(a);
+                self.status.set_zn(self.y);
+                4
+            }
+            0xAC => {
+                let a = abs!();
+                self.y = bus.cpu_read(a);
+                self.status.set_zn(self.y);
+                4
+            }
+            0xBC => {
+                let a = abx!();
+                self.y = bus.cpu_read(a);
+                self.status.set_zn(self.y);
+                4
+            }
 
             // STY
-            0x84 => { let a=zp!();bus.cpu_write(a,self.y);3 }
-            0x94 => { let a=zpx!();bus.cpu_write(a,self.y);4 }
-            0x8C => { let a=abs!();bus.cpu_write(a,self.y);4 }
+            0x84 => {
+                let a = zp!();
+                bus.cpu_write(a, self.y);
+                3
+            }
+            0x94 => {
+                let a = zpx!();
+                bus.cpu_write(a, self.y);
+                4
+            }
+            0x8C => {
+                let a = abs!();
+                bus.cpu_write(a, self.y);
+                4
+            }
 
             // Transfers
-            0xAA => { self.x=self.a;self.status.set_zn(self.x);2 }
-            0x8A => { self.a=self.x;self.status.set_zn(self.a);2 }
-            0xA8 => { self.y=self.a;self.status.set_zn(self.y);2 }
-            0x98 => { self.a=self.y;self.status.set_zn(self.a);2 }
-            0xBA => { self.x=sp;self.status.set_zn(self.x);2 }
-            0x9A => { sp=self.x;2 }
+            0xAA => {
+                self.x = self.a;
+                self.status.set_zn(self.x);
+                2
+            }
+            0x8A => {
+                self.a = self.x;
+                self.status.set_zn(self.a);
+                2
+            }
+            0xA8 => {
+                self.y = self.a;
+                self.status.set_zn(self.y);
+                2
+            }
+            0x98 => {
+                self.a = self.y;
+                self.status.set_zn(self.a);
+                2
+            }
+            0xBA => {
+                self.x = sp;
+                self.status.set_zn(self.x);
+                2
+            }
+            0x9A => {
+                sp = self.x;
+                2
+            }
 
             // Stack
-            0x48 => { bus.cpu_write(0x0100|sp as u16,self.a);sp=sp.wrapping_sub(1);3 }
-            0x68 => { sp=sp.wrapping_add(1);self.a=bus.cpu_read(0x0100|sp as u16);self.status.set_zn(self.a);4 }
-            0x28 => { sp=sp.wrapping_add(1);self.status=CpuFlags::from_byte(bus.cpu_read(0x0100|sp as u16));4 }
+            0x48 => {
+                bus.cpu_write(0x0100 | sp as u16, self.a);
+                sp = sp.wrapping_sub(1);
+                3
+            }
+            0x68 => {
+                sp = sp.wrapping_add(1);
+                self.a = bus.cpu_read(0x0100 | sp as u16);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x28 => {
+                sp = sp.wrapping_add(1);
+                self.status = CpuFlags::from_byte(bus.cpu_read(0x0100 | sp as u16));
+                4
+            }
 
             // ADC
-            0x69 => { let v=imm!();let r=self.a as u16+v as u16+self.status.carry as u16;self.status.carry=r>0xFF;let r8=r as u8;self.status.overflow=((self.a^r8)&(v^r8)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);2 }
-            0x65 => { let a=zp!();let v=bus.cpu_read(a);let r=self.a as u16+v as u16+self.status.carry as u16;self.status.carry=r>0xFF;let r8=r as u8;self.status.overflow=((self.a^r8)&(v^r8)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);3 }
-            0x75 => { let a=zpx!();let v=bus.cpu_read(a);let r=self.a as u16+v as u16+self.status.carry as u16;self.status.carry=r>0xFF;let r8=r as u8;self.status.overflow=((self.a^r8)&(v^r8)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);4 }
-            0x6D => { let a=abs!();let v=bus.cpu_read(a);let r=self.a as u16+v as u16+self.status.carry as u16;self.status.carry=r>0xFF;let r8=r as u8;self.status.overflow=((self.a^r8)&(v^r8)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);4 }
-            0x7D => { let a=abx!();let v=bus.cpu_read(a);let r=self.a as u16+v as u16+self.status.carry as u16;self.status.carry=r>0xFF;let r8=r as u8;self.status.overflow=((self.a^r8)&(v^r8)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);4 }
-            0x79 => { let a=aby!();let v=bus.cpu_read(a);let r=self.a as u16+v as u16+self.status.carry as u16;self.status.carry=r>0xFF;let r8=r as u8;self.status.overflow=((self.a^r8)&(v^r8)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);4 }
-            0x61 => { let a=izx!();let v=bus.cpu_read(a);let r=self.a as u16+v as u16+self.status.carry as u16;self.status.carry=r>0xFF;let r8=r as u8;self.status.overflow=((self.a^r8)&(v^r8)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);6 }
-            0x71 => { let a=izy!();let v=bus.cpu_read(a);let r=self.a as u16+v as u16+self.status.carry as u16;self.status.carry=r>0xFF;let r8=r as u8;self.status.overflow=((self.a^r8)&(v^r8)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);5 }
+            0x69 => {
+                let v = imm!();
+                let r = self.a as u16 + v as u16 + self.status.carry as u16;
+                self.status.carry = r > 0xFF;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a ^ r8) & (v ^ r8) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                2
+            }
+            0x65 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                let r = self.a as u16 + v as u16 + self.status.carry as u16;
+                self.status.carry = r > 0xFF;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a ^ r8) & (v ^ r8) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                3
+            }
+            0x75 => {
+                let a = zpx!();
+                let v = bus.cpu_read(a);
+                let r = self.a as u16 + v as u16 + self.status.carry as u16;
+                self.status.carry = r > 0xFF;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a ^ r8) & (v ^ r8) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                4
+            }
+            0x6D => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                let r = self.a as u16 + v as u16 + self.status.carry as u16;
+                self.status.carry = r > 0xFF;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a ^ r8) & (v ^ r8) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                4
+            }
+            0x7D => {
+                let a = abx!();
+                let v = bus.cpu_read(a);
+                let r = self.a as u16 + v as u16 + self.status.carry as u16;
+                self.status.carry = r > 0xFF;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a ^ r8) & (v ^ r8) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                4
+            }
+            0x79 => {
+                let a = aby!();
+                let v = bus.cpu_read(a);
+                let r = self.a as u16 + v as u16 + self.status.carry as u16;
+                self.status.carry = r > 0xFF;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a ^ r8) & (v ^ r8) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                4
+            }
+            0x61 => {
+                let a = izx!();
+                let v = bus.cpu_read(a);
+                let r = self.a as u16 + v as u16 + self.status.carry as u16;
+                self.status.carry = r > 0xFF;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a ^ r8) & (v ^ r8) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                6
+            }
+            0x71 => {
+                let a = izy!();
+                let v = bus.cpu_read(a);
+                let r = self.a as u16 + v as u16 + self.status.carry as u16;
+                self.status.carry = r > 0xFF;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a ^ r8) & (v ^ r8) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                5
+            }
 
             // SBC
-            0xE9 => { let v=imm!();let r=self.a as i16-v as i16-(1-self.status.carry as i16);self.status.carry=r>=0;let r8=r as u8;self.status.overflow=((self.a as i16^r)&((-(v as i16))^r)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);2 }
-            0xE5 => { let a=zp!();let v=bus.cpu_read(a);let r=self.a as i16-v as i16-(1-self.status.carry as i16);self.status.carry=r>=0;let r8=r as u8;self.status.overflow=((self.a as i16^r)&((-(v as i16))^r)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);3 }
-            0xF5 => { let a=zpx!();let v=bus.cpu_read(a);let r=self.a as i16-v as i16-(1-self.status.carry as i16);self.status.carry=r>=0;let r8=r as u8;self.status.overflow=((self.a as i16^r)&((-(v as i16))^r)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);4 }
-            0xED => { let a=abs!();let v=bus.cpu_read(a);let r=self.a as i16-v as i16-(1-self.status.carry as i16);self.status.carry=r>=0;let r8=r as u8;self.status.overflow=((self.a as i16^r)&((-(v as i16))^r)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);4 }
-            0xFD => { let a=abx!();let v=bus.cpu_read(a);let r=self.a as i16-v as i16-(1-self.status.carry as i16);self.status.carry=r>=0;let r8=r as u8;self.status.overflow=((self.a as i16^r)&((-(v as i16))^r)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);4 }
-            0xF9 => { let a=aby!();let v=bus.cpu_read(a);let r=self.a as i16-v as i16-(1-self.status.carry as i16);self.status.carry=r>=0;let r8=r as u8;self.status.overflow=((self.a as i16^r)&((-(v as i16))^r)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);4 }
-            0xE1 => { let a=izx!();let v=bus.cpu_read(a);let r=self.a as i16-v as i16-(1-self.status.carry as i16);self.status.carry=r>=0;let r8=r as u8;self.status.overflow=((self.a as i16^r)&((-(v as i16))^r)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);6 }
-            0xF1 => { let a=izy!();let v=bus.cpu_read(a);let r=self.a as i16-v as i16-(1-self.status.carry as i16);self.status.carry=r>=0;let r8=r as u8;self.status.overflow=((self.a as i16^r)&((-(v as i16))^r)&0x80)!=0;self.a=r8;self.status.set_zn(self.a);5 }
+            0xE9 => {
+                let v = imm!();
+                let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
+                self.status.carry = r >= 0;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                2
+            }
+            0xE5 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
+                self.status.carry = r >= 0;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                3
+            }
+            0xF5 => {
+                let a = zpx!();
+                let v = bus.cpu_read(a);
+                let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
+                self.status.carry = r >= 0;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                4
+            }
+            0xED => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
+                self.status.carry = r >= 0;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                4
+            }
+            0xFD => {
+                let a = abx!();
+                let v = bus.cpu_read(a);
+                let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
+                self.status.carry = r >= 0;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                4
+            }
+            0xF9 => {
+                let a = aby!();
+                let v = bus.cpu_read(a);
+                let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
+                self.status.carry = r >= 0;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                4
+            }
+            0xE1 => {
+                let a = izx!();
+                let v = bus.cpu_read(a);
+                let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
+                self.status.carry = r >= 0;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                6
+            }
+            0xF1 => {
+                let a = izy!();
+                let v = bus.cpu_read(a);
+                let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
+                self.status.carry = r >= 0;
+                let r8 = r as u8;
+                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.a = r8;
+                self.status.set_zn(self.a);
+                5
+            }
 
             // AND
-            0x29 => { self.a&=imm!();self.status.set_zn(self.a);2 }
-            0x25 => { let a=zp!();self.a&=bus.cpu_read(a);self.status.set_zn(self.a);3 }
-            0x35 => { let a=zpx!();self.a&=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0x2D => { let a=abs!();self.a&=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0x3D => { let a=abx!();self.a&=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0x39 => { let a=aby!();self.a&=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0x21 => { let a=izx!();self.a&=bus.cpu_read(a);self.status.set_zn(self.a);6 }
-            0x31 => { let a=izy!();self.a&=bus.cpu_read(a);self.status.set_zn(self.a);5 }
+            0x29 => {
+                self.a &= imm!();
+                self.status.set_zn(self.a);
+                2
+            }
+            0x25 => {
+                let a = zp!();
+                self.a &= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                3
+            }
+            0x35 => {
+                let a = zpx!();
+                self.a &= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x2D => {
+                let a = abs!();
+                self.a &= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x3D => {
+                let a = abx!();
+                self.a &= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x39 => {
+                let a = aby!();
+                self.a &= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x21 => {
+                let a = izx!();
+                self.a &= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                6
+            }
+            0x31 => {
+                let a = izy!();
+                self.a &= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                5
+            }
 
             // EOR
-            0x49 => { self.a^=imm!();self.status.set_zn(self.a);2 }
-            0x45 => { let a=zp!();self.a^=bus.cpu_read(a);self.status.set_zn(self.a);3 }
-            0x55 => { let a=zpx!();self.a^=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0x4D => { let a=abs!();self.a^=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0x5D => { let a=abx!();self.a^=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0x59 => { let a=aby!();self.a^=bus.cpu_read(a);self.status.set_zn(self.a);4 }
-            0x41 => { let a=izx!();self.a^=bus.cpu_read(a);self.status.set_zn(self.a);6 }
-            0x51 => { let a=izy!();self.a^=bus.cpu_read(a);self.status.set_zn(self.a);5 }
+            0x49 => {
+                self.a ^= imm!();
+                self.status.set_zn(self.a);
+                2
+            }
+            0x45 => {
+                let a = zp!();
+                self.a ^= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                3
+            }
+            0x55 => {
+                let a = zpx!();
+                self.a ^= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x4D => {
+                let a = abs!();
+                self.a ^= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x5D => {
+                let a = abx!();
+                self.a ^= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x59 => {
+                let a = aby!();
+                self.a ^= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                4
+            }
+            0x41 => {
+                let a = izx!();
+                self.a ^= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                6
+            }
+            0x51 => {
+                let a = izy!();
+                self.a ^= bus.cpu_read(a);
+                self.status.set_zn(self.a);
+                5
+            }
 
             // CMP
-            0xC9 => { let v=imm!();self.status.carry=self.a>=v;self.status.set_zn(self.a.wrapping_sub(v));2 }
-            0xC5 => { let a=zp!();let v=bus.cpu_read(a);self.status.carry=self.a>=v;self.status.set_zn(self.a.wrapping_sub(v));3 }
-            0xD5 => { let a=zpx!();let v=bus.cpu_read(a);self.status.carry=self.a>=v;self.status.set_zn(self.a.wrapping_sub(v));4 }
-            0xCD => { let a=abs!();let v=bus.cpu_read(a);self.status.carry=self.a>=v;self.status.set_zn(self.a.wrapping_sub(v));4 }
-            0xDD => { let a=abx!();let v=bus.cpu_read(a);self.status.carry=self.a>=v;self.status.set_zn(self.a.wrapping_sub(v));4 }
-            0xD9 => { let a=aby!();let v=bus.cpu_read(a);self.status.carry=self.a>=v;self.status.set_zn(self.a.wrapping_sub(v));4 }
-            0xC1 => { let a=izx!();let v=bus.cpu_read(a);self.status.carry=self.a>=v;self.status.set_zn(self.a.wrapping_sub(v));6 }
-            0xD1 => { let a=izy!();let v=bus.cpu_read(a);self.status.carry=self.a>=v;self.status.set_zn(self.a.wrapping_sub(v));5 }
+            0xC9 => {
+                let v = imm!();
+                self.status.carry = self.a >= v;
+                self.status.set_zn(self.a.wrapping_sub(v));
+                2
+            }
+            0xC5 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.a >= v;
+                self.status.set_zn(self.a.wrapping_sub(v));
+                3
+            }
+            0xD5 => {
+                let a = zpx!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.a >= v;
+                self.status.set_zn(self.a.wrapping_sub(v));
+                4
+            }
+            0xCD => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.a >= v;
+                self.status.set_zn(self.a.wrapping_sub(v));
+                4
+            }
+            0xDD => {
+                let a = abx!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.a >= v;
+                self.status.set_zn(self.a.wrapping_sub(v));
+                4
+            }
+            0xD9 => {
+                let a = aby!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.a >= v;
+                self.status.set_zn(self.a.wrapping_sub(v));
+                4
+            }
+            0xC1 => {
+                let a = izx!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.a >= v;
+                self.status.set_zn(self.a.wrapping_sub(v));
+                6
+            }
+            0xD1 => {
+                let a = izy!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.a >= v;
+                self.status.set_zn(self.a.wrapping_sub(v));
+                5
+            }
 
             // CPX
-            0xE0 => { let v=imm!();self.status.carry=self.x>=v;self.status.set_zn(self.x.wrapping_sub(v));2 }
-            0xE4 => { let a=zp!();let v=bus.cpu_read(a);self.status.carry=self.x>=v;self.status.set_zn(self.x.wrapping_sub(v));3 }
-            0xEC => { let a=abs!();let v=bus.cpu_read(a);self.status.carry=self.x>=v;self.status.set_zn(self.x.wrapping_sub(v));4 }
+            0xE0 => {
+                let v = imm!();
+                self.status.carry = self.x >= v;
+                self.status.set_zn(self.x.wrapping_sub(v));
+                2
+            }
+            0xE4 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.x >= v;
+                self.status.set_zn(self.x.wrapping_sub(v));
+                3
+            }
+            0xEC => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.x >= v;
+                self.status.set_zn(self.x.wrapping_sub(v));
+                4
+            }
 
             // CPY
-            0xC0 => { let v=imm!();self.status.carry=self.y>=v;self.status.set_zn(self.y.wrapping_sub(v));2 }
-            0xC4 => { let a=zp!();let v=bus.cpu_read(a);self.status.carry=self.y>=v;self.status.set_zn(self.y.wrapping_sub(v));3 }
-            0xCC => { let a=abs!();let v=bus.cpu_read(a);self.status.carry=self.y>=v;self.status.set_zn(self.y.wrapping_sub(v));4 }
+            0xC0 => {
+                let v = imm!();
+                self.status.carry = self.y >= v;
+                self.status.set_zn(self.y.wrapping_sub(v));
+                2
+            }
+            0xC4 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.y >= v;
+                self.status.set_zn(self.y.wrapping_sub(v));
+                3
+            }
+            0xCC => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                self.status.carry = self.y >= v;
+                self.status.set_zn(self.y.wrapping_sub(v));
+                4
+            }
 
             // INC
-            0xE6 => { let a=zp!();let v=bus.cpu_read(a).wrapping_add(1);bus.cpu_write(a,v);self.status.set_zn(v);5 }
-            0xF6 => { let a=zpx!();let v=bus.cpu_read(a).wrapping_add(1);bus.cpu_write(a,v);self.status.set_zn(v);6 }
-            0xEE => { let a=abs!();let v=bus.cpu_read(a).wrapping_add(1);bus.cpu_write(a,v);self.status.set_zn(v);6 }
-            0xFE => { let a=abx!();let v=bus.cpu_read(a).wrapping_add(1);bus.cpu_write(a,v);self.status.set_zn(v);7 }
+            0xE6 => {
+                let a = zp!();
+                let v = bus.cpu_read(a).wrapping_add(1);
+                bus.cpu_write(a, v);
+                self.status.set_zn(v);
+                5
+            }
+            0xF6 => {
+                let a = zpx!();
+                let v = bus.cpu_read(a).wrapping_add(1);
+                bus.cpu_write(a, v);
+                self.status.set_zn(v);
+                6
+            }
+            0xEE => {
+                let a = abs!();
+                let v = bus.cpu_read(a).wrapping_add(1);
+                bus.cpu_write(a, v);
+                self.status.set_zn(v);
+                6
+            }
+            0xFE => {
+                let a = abx!();
+                let v = bus.cpu_read(a).wrapping_add(1);
+                bus.cpu_write(a, v);
+                self.status.set_zn(v);
+                7
+            }
 
             // DEC
-            0xC6 => { let a=zp!();let v=bus.cpu_read(a).wrapping_sub(1);bus.cpu_write(a,v);self.status.set_zn(v);5 }
-            0xD6 => { let a=zpx!();let v=bus.cpu_read(a).wrapping_sub(1);bus.cpu_write(a,v);self.status.set_zn(v);6 }
-            0xCE => { let a=abs!();let v=bus.cpu_read(a).wrapping_sub(1);bus.cpu_write(a,v);self.status.set_zn(v);6 }
-            0xDE => { let a=abx!();let v=bus.cpu_read(a).wrapping_sub(1);bus.cpu_write(a,v);self.status.set_zn(v);7 }
+            0xC6 => {
+                let a = zp!();
+                let v = bus.cpu_read(a).wrapping_sub(1);
+                bus.cpu_write(a, v);
+                self.status.set_zn(v);
+                5
+            }
+            0xD6 => {
+                let a = zpx!();
+                let v = bus.cpu_read(a).wrapping_sub(1);
+                bus.cpu_write(a, v);
+                self.status.set_zn(v);
+                6
+            }
+            0xCE => {
+                let a = abs!();
+                let v = bus.cpu_read(a).wrapping_sub(1);
+                bus.cpu_write(a, v);
+                self.status.set_zn(v);
+                6
+            }
+            0xDE => {
+                let a = abx!();
+                let v = bus.cpu_read(a).wrapping_sub(1);
+                bus.cpu_write(a, v);
+                self.status.set_zn(v);
+                7
+            }
 
             // INX/INY/DEX/DEY
-            0xE8 => { self.x=self.x.wrapping_add(1);self.status.set_zn(self.x);2 }
-            0xC8 => { self.y=self.y.wrapping_add(1);self.status.set_zn(self.y);2 }
-            0xCA => { self.x=self.x.wrapping_sub(1);self.status.set_zn(self.x);2 }
-            0x88 => { self.y=self.y.wrapping_sub(1);self.status.set_zn(self.y);2 }
+            0xE8 => {
+                self.x = self.x.wrapping_add(1);
+                self.status.set_zn(self.x);
+                2
+            }
+            0xC8 => {
+                self.y = self.y.wrapping_add(1);
+                self.status.set_zn(self.y);
+                2
+            }
+            0xCA => {
+                self.x = self.x.wrapping_sub(1);
+                self.status.set_zn(self.x);
+                2
+            }
+            0x88 => {
+                self.y = self.y.wrapping_sub(1);
+                self.status.set_zn(self.y);
+                2
+            }
 
             // LSR
-            0x4A => { self.status.carry=self.a&1!=0;self.a>>=1;self.status.set_zn(self.a);2 }
-            0x46 => { let a=zp!();let v=bus.cpu_read(a);bus.cpu_write(a,v>>1);self.status.carry=v&1!=0;self.status.set_zn(v>>1);5 }
-            0x56 => { let a=zpx!();let v=bus.cpu_read(a);bus.cpu_write(a,v>>1);self.status.carry=v&1!=0;self.status.set_zn(v>>1);6 }
-            0x4E => { let a=abs!();let v=bus.cpu_read(a);bus.cpu_write(a,v>>1);self.status.carry=v&1!=0;self.status.set_zn(v>>1);6 }
-            0x5E => { let a=abx!();let v=bus.cpu_read(a);bus.cpu_write(a,v>>1);self.status.carry=v&1!=0;self.status.set_zn(v>>1);7 }
+            0x4A => {
+                self.status.carry = self.a & 1 != 0;
+                self.a >>= 1;
+                self.status.set_zn(self.a);
+                2
+            }
+            0x46 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                bus.cpu_write(a, v >> 1);
+                self.status.carry = v & 1 != 0;
+                self.status.set_zn(v >> 1);
+                5
+            }
+            0x56 => {
+                let a = zpx!();
+                let v = bus.cpu_read(a);
+                bus.cpu_write(a, v >> 1);
+                self.status.carry = v & 1 != 0;
+                self.status.set_zn(v >> 1);
+                6
+            }
+            0x4E => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                bus.cpu_write(a, v >> 1);
+                self.status.carry = v & 1 != 0;
+                self.status.set_zn(v >> 1);
+                6
+            }
+            0x5E => {
+                let a = abx!();
+                let v = bus.cpu_read(a);
+                bus.cpu_write(a, v >> 1);
+                self.status.carry = v & 1 != 0;
+                self.status.set_zn(v >> 1);
+                7
+            }
 
             // ROL
-            0x2A => { let c=self.status.carry as u8;self.status.carry=self.a&0x80!=0;self.a=(self.a<<1)|c;self.status.set_zn(self.a);2 }
-            0x26 => { let a=zp!();let v=bus.cpu_read(a);let c=self.status.carry as u8;self.status.carry=v&0x80!=0;let r=(v<<1)|c;bus.cpu_write(a,r);self.status.set_zn(r);5 }
-            0x36 => { let a=zpx!();let v=bus.cpu_read(a);let c=self.status.carry as u8;self.status.carry=v&0x80!=0;let r=(v<<1)|c;bus.cpu_write(a,r);self.status.set_zn(r);6 }
-            0x2E => { let a=abs!();let v=bus.cpu_read(a);let c=self.status.carry as u8;self.status.carry=v&0x80!=0;let r=(v<<1)|c;bus.cpu_write(a,r);self.status.set_zn(r);6 }
-            0x3E => { let a=abx!();let v=bus.cpu_read(a);let c=self.status.carry as u8;self.status.carry=v&0x80!=0;let r=(v<<1)|c;bus.cpu_write(a,r);self.status.set_zn(r);7 }
+            0x2A => {
+                let c = self.status.carry as u8;
+                self.status.carry = self.a & 0x80 != 0;
+                self.a = (self.a << 1) | c;
+                self.status.set_zn(self.a);
+                2
+            }
+            0x26 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                let c = self.status.carry as u8;
+                self.status.carry = v & 0x80 != 0;
+                let r = (v << 1) | c;
+                bus.cpu_write(a, r);
+                self.status.set_zn(r);
+                5
+            }
+            0x36 => {
+                let a = zpx!();
+                let v = bus.cpu_read(a);
+                let c = self.status.carry as u8;
+                self.status.carry = v & 0x80 != 0;
+                let r = (v << 1) | c;
+                bus.cpu_write(a, r);
+                self.status.set_zn(r);
+                6
+            }
+            0x2E => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                let c = self.status.carry as u8;
+                self.status.carry = v & 0x80 != 0;
+                let r = (v << 1) | c;
+                bus.cpu_write(a, r);
+                self.status.set_zn(r);
+                6
+            }
+            0x3E => {
+                let a = abx!();
+                let v = bus.cpu_read(a);
+                let c = self.status.carry as u8;
+                self.status.carry = v & 0x80 != 0;
+                let r = (v << 1) | c;
+                bus.cpu_write(a, r);
+                self.status.set_zn(r);
+                7
+            }
 
             // ROR
-            0x6A => { let c=(self.status.carry as u8)<<7;self.status.carry=self.a&1!=0;self.a=(self.a>>1)|c;self.status.set_zn(self.a);2 }
-            0x66 => { let a=zp!();let v=bus.cpu_read(a);let c=(self.status.carry as u8)<<7;self.status.carry=v&1!=0;let r=(v>>1)|c;bus.cpu_write(a,r);self.status.set_zn(r);5 }
-            0x76 => { let a=zpx!();let v=bus.cpu_read(a);let c=(self.status.carry as u8)<<7;self.status.carry=v&1!=0;let r=(v>>1)|c;bus.cpu_write(a,r);self.status.set_zn(r);6 }
-            0x6E => { let a=abs!();let v=bus.cpu_read(a);let c=(self.status.carry as u8)<<7;self.status.carry=v&1!=0;let r=(v>>1)|c;bus.cpu_write(a,r);self.status.set_zn(r);6 }
-            0x7E => { let a=abx!();let v=bus.cpu_read(a);let c=(self.status.carry as u8)<<7;self.status.carry=v&1!=0;let r=(v>>1)|c;bus.cpu_write(a,r);self.status.set_zn(r);7 }
+            0x6A => {
+                let c = (self.status.carry as u8) << 7;
+                self.status.carry = self.a & 1 != 0;
+                self.a = (self.a >> 1) | c;
+                self.status.set_zn(self.a);
+                2
+            }
+            0x66 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                let c = (self.status.carry as u8) << 7;
+                self.status.carry = v & 1 != 0;
+                let r = (v >> 1) | c;
+                bus.cpu_write(a, r);
+                self.status.set_zn(r);
+                5
+            }
+            0x76 => {
+                let a = zpx!();
+                let v = bus.cpu_read(a);
+                let c = (self.status.carry as u8) << 7;
+                self.status.carry = v & 1 != 0;
+                let r = (v >> 1) | c;
+                bus.cpu_write(a, r);
+                self.status.set_zn(r);
+                6
+            }
+            0x6E => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                let c = (self.status.carry as u8) << 7;
+                self.status.carry = v & 1 != 0;
+                let r = (v >> 1) | c;
+                bus.cpu_write(a, r);
+                self.status.set_zn(r);
+                6
+            }
+            0x7E => {
+                let a = abx!();
+                let v = bus.cpu_read(a);
+                let c = (self.status.carry as u8) << 7;
+                self.status.carry = v & 1 != 0;
+                let r = (v >> 1) | c;
+                bus.cpu_write(a, r);
+                self.status.set_zn(r);
+                7
+            }
 
             // BIT
-            0x24 => { let a=zp!();let v=bus.cpu_read(a);self.status.zero=self.a&v==0;self.status.overflow=v&0x40!=0;self.status.negative=v&0x80!=0;3 }
-            0x2C => { let a=abs!();let v=bus.cpu_read(a);self.status.zero=self.a&v==0;self.status.overflow=v&0x40!=0;self.status.negative=v&0x80!=0;4 }
+            0x24 => {
+                let a = zp!();
+                let v = bus.cpu_read(a);
+                self.status.zero = self.a & v == 0;
+                self.status.overflow = v & 0x40 != 0;
+                self.status.negative = v & 0x80 != 0;
+                3
+            }
+            0x2C => {
+                let a = abs!();
+                let v = bus.cpu_read(a);
+                self.status.zero = self.a & v == 0;
+                self.status.overflow = v & 0x40 != 0;
+                self.status.negative = v & 0x80 != 0;
+                4
+            }
 
             // JMP
-            0x4C => { pc=abs!();3 }
-            0x6C => { pc=ind!();5 }
+            0x4C => {
+                pc = abs!();
+                3
+            }
+            0x6C => {
+                pc = ind!();
+                5
+            }
 
             // JSR/RTS/RTI
-            0x20 => { let target=abs!();let npc=pc.wrapping_sub(1);bus.cpu_write(0x0100|sp as u16,(npc>>8)as u8);sp=sp.wrapping_sub(1);bus.cpu_write(0x0100|sp as u16,npc as u8);sp=sp.wrapping_sub(1);pc=target;6 }
-            0x60 => { sp=sp.wrapping_add(1);let lo=bus.cpu_read(0x0100|sp as u16)as u16;sp=sp.wrapping_add(1);let hi=bus.cpu_read(0x0100|sp as u16)as u16;pc=(lo|(hi<<8)).wrapping_add(1);6 }
-            0x40 => { sp=sp.wrapping_add(1);self.status=CpuFlags::from_byte(bus.cpu_read(0x0100|sp as u16));sp=sp.wrapping_add(1);let lo=bus.cpu_read(0x0100|sp as u16)as u16;sp=sp.wrapping_add(1);let hi=bus.cpu_read(0x0100|sp as u16)as u16;pc=lo|(hi<<8);6 }
+            0x20 => {
+                let target = abs!();
+                let npc = pc.wrapping_sub(1);
+                bus.cpu_write(0x0100 | sp as u16, (npc >> 8) as u8);
+                sp = sp.wrapping_sub(1);
+                bus.cpu_write(0x0100 | sp as u16, npc as u8);
+                sp = sp.wrapping_sub(1);
+                pc = target;
+                6
+            }
+            0x60 => {
+                sp = sp.wrapping_add(1);
+                let lo = bus.cpu_read(0x0100 | sp as u16) as u16;
+                sp = sp.wrapping_add(1);
+                let hi = bus.cpu_read(0x0100 | sp as u16) as u16;
+                pc = (lo | (hi << 8)).wrapping_add(1);
+                6
+            }
+            0x40 => {
+                sp = sp.wrapping_add(1);
+                self.status = CpuFlags::from_byte(bus.cpu_read(0x0100 | sp as u16));
+                sp = sp.wrapping_add(1);
+                let lo = bus.cpu_read(0x0100 | sp as u16) as u16;
+                sp = sp.wrapping_add(1);
+                let hi = bus.cpu_read(0x0100 | sp as u16) as u16;
+                pc = lo | (hi << 8);
+                6
+            }
 
             // Branch
-            0x10 => { let offset=bus.cpu_read(pc)as i8;pc=pc.wrapping_add(1);if !self.status.negative{pc=pc.wrapping_add(offset as u16);3}else{2} }
-            0x30 => { let offset=bus.cpu_read(pc)as i8;pc=pc.wrapping_add(1);if self.status.negative{pc=pc.wrapping_add(offset as u16);3}else{2} }
-            0x50 => { let offset=bus.cpu_read(pc)as i8;pc=pc.wrapping_add(1);if self.status.overflow{pc=pc.wrapping_add(offset as u16);3}else{2} }
-            0x70 => { let offset=bus.cpu_read(pc)as i8;pc=pc.wrapping_add(1);if !self.status.overflow{pc=pc.wrapping_add(offset as u16);3}else{2} }
-            0x90 => { let offset=bus.cpu_read(pc)as i8;pc=pc.wrapping_add(1);if !self.status.carry{pc=pc.wrapping_add(offset as u16);3}else{2} }
-            0xB0 => { let offset=bus.cpu_read(pc)as i8;pc=pc.wrapping_add(1);if self.status.carry{pc=pc.wrapping_add(offset as u16);3}else{2} }
-            0xD0 => { let offset=bus.cpu_read(pc)as i8;pc=pc.wrapping_add(1);if !self.status.zero{pc=pc.wrapping_add(offset as u16);3}else{2} }
-            0xF0 => { let offset=bus.cpu_read(pc)as i8;pc=pc.wrapping_add(1);if self.status.zero{pc=pc.wrapping_add(offset as u16);3}else{2} }
+            0x10 => {
+                let offset = bus.cpu_read(pc) as i8;
+                pc = pc.wrapping_add(1);
+                if !self.status.negative {
+                    pc = pc.wrapping_add(offset as u16);
+                    3
+                } else {
+                    2
+                }
+            }
+            0x30 => {
+                let offset = bus.cpu_read(pc) as i8;
+                pc = pc.wrapping_add(1);
+                if self.status.negative {
+                    pc = pc.wrapping_add(offset as u16);
+                    3
+                } else {
+                    2
+                }
+            }
+            0x50 => {
+                let offset = bus.cpu_read(pc) as i8;
+                pc = pc.wrapping_add(1);
+                if self.status.overflow {
+                    pc = pc.wrapping_add(offset as u16);
+                    3
+                } else {
+                    2
+                }
+            }
+            0x70 => {
+                let offset = bus.cpu_read(pc) as i8;
+                pc = pc.wrapping_add(1);
+                if !self.status.overflow {
+                    pc = pc.wrapping_add(offset as u16);
+                    3
+                } else {
+                    2
+                }
+            }
+            0x90 => {
+                let offset = bus.cpu_read(pc) as i8;
+                pc = pc.wrapping_add(1);
+                if !self.status.carry {
+                    pc = pc.wrapping_add(offset as u16);
+                    3
+                } else {
+                    2
+                }
+            }
+            0xB0 => {
+                let offset = bus.cpu_read(pc) as i8;
+                pc = pc.wrapping_add(1);
+                if self.status.carry {
+                    pc = pc.wrapping_add(offset as u16);
+                    3
+                } else {
+                    2
+                }
+            }
+            0xD0 => {
+                let offset = bus.cpu_read(pc) as i8;
+                pc = pc.wrapping_add(1);
+                if !self.status.zero {
+                    pc = pc.wrapping_add(offset as u16);
+                    3
+                } else {
+                    2
+                }
+            }
+            0xF0 => {
+                let offset = bus.cpu_read(pc) as i8;
+                pc = pc.wrapping_add(1);
+                if self.status.zero {
+                    pc = pc.wrapping_add(offset as u16);
+                    3
+                } else {
+                    2
+                }
+            }
 
             // Clear/Set flags
-            0x18 => { self.status.carry=false;2 }
-            0x38 => { self.status.carry=true;2 }
-            0x58 => { self.status.interrupt_disable=false;2 }
-            0x78 => { self.status.interrupt_disable=true;2 }
-            0xB8 => { self.status.overflow=false;2 }
-            0xD8 => { self.status.decimal=false;2 }
-            0xF8 => { self.status.decimal=true;2 }
+            0x18 => {
+                self.status.carry = false;
+                2
+            }
+            0x38 => {
+                self.status.carry = true;
+                2
+            }
+            0x58 => {
+                self.status.interrupt_disable = false;
+                2
+            }
+            0x78 => {
+                self.status.interrupt_disable = true;
+                2
+            }
+            0xB8 => {
+                self.status.overflow = false;
+                2
+            }
+            0xD8 => {
+                self.status.decimal = false;
+                2
+            }
+            0xF8 => {
+                self.status.decimal = true;
+                2
+            }
             0xEA => 2, // NOP
 
             _ => 2,
@@ -340,9 +1285,13 @@ mod tests {
             .unwrap_or_else(|| crate::mapper::registry::builtin_nrom(&rom));
         let cartridge = crate::mapper::Cartridge::new_simple(
             crate::mapper::CartridgeMetadata {
-                mapper_id: 0, submapper_id: 0,
-                prg_rom_size: 1, chr_rom_size: 1,
-                has_sram: false, has_trainer: false, battery_backed: false,
+                mapper_id: 0,
+                submapper_id: 0,
+                prg_rom_size: 1,
+                chr_rom_size: 1,
+                has_sram: false,
+                has_trainer: false,
+                battery_backed: false,
             },
             rom.prg_rom.clone(),
             crate::mapper::ChrStorage::Rom(rom.chr_rom.clone().unwrap_or_default()),
@@ -446,7 +1395,7 @@ mod tests {
         cpu.step(&mut bus); // ADC #$01
         assert_eq!(cpu.a, 0x00);
         assert!(cpu.status.carry); // 0xFF + 0x01 = 0x100 → carry
-        assert!(cpu.status.zero);  // result is 0
+        assert!(cpu.status.zero); // result is 0
     }
 
     // ─── Test 8: SBC basic ─────

@@ -133,7 +133,10 @@ mod tests {
         let mut port = NesControllerPort::new();
         // Set buttons: A + B + Start
         port.set_current(NesControllerState {
-            a: true, b: true, start: true, ..Default::default()
+            a: true,
+            b: true,
+            start: true,
+            ..Default::default()
         });
         // Strobe to latch
         port.write_strobe(1);
@@ -153,7 +156,11 @@ mod tests {
     #[test]
     fn test_sanitize_opposites() {
         let state = NesControllerState {
-            left: true, right: true, up: true, down: true, ..Default::default()
+            left: true,
+            right: true,
+            up: true,
+            down: true,
+            ..Default::default()
         };
         let sanitized = state.sanitize_opposites();
         assert!(!sanitized.left);

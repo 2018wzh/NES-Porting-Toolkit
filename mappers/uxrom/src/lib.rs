@@ -9,12 +9,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use nptk_core::mapper::registry::{MapperConstructor, MAPPER_REGISTRY};
-use nptk_core::mapper::types::{
-    IrqState, MapperDebugInfo, MapperSaveState, PpuBusEvent,
-};
-use nptk_core::rom::Mirroring;
+use nptk_core::mapper::registry::{MAPPER_REGISTRY, MapperConstructor};
+use nptk_core::mapper::types::{IrqState, MapperDebugInfo, MapperSaveState, PpuBusEvent};
 use nptk_core::mapper::{MapperChip, MapperContext};
+use nptk_core::rom::Mirroring;
 use nptk_core::rom::NesRom;
 
 /// UxROM (Mapper 2) 实现
@@ -47,11 +45,7 @@ impl MapperChip for Mapper002Uxrom {
         "UxROM"
     }
 
-    fn cpu_read(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-    ) -> Option<u8> {
+    fn cpu_read(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8> {
         match addr {
             0x8000..=0xBFFF => {
                 let ctx = ctx.borrow();
@@ -77,12 +71,7 @@ impl MapperChip for Mapper002Uxrom {
         }
     }
 
-    fn cpu_write(
-        &mut self,
-        _ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-        value: u8,
-    ) -> bool {
+    fn cpu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, addr: u16, value: u8) -> bool {
         match addr {
             0x8000..=0xFFFF => {
                 self.selected_prg_bank = (value & 0x0F) as usize;
@@ -92,11 +81,7 @@ impl MapperChip for Mapper002Uxrom {
         }
     }
 
-    fn ppu_read(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-    ) -> Option<u8> {
+    fn ppu_read(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8> {
         match addr {
             0x0000..=0x1FFF => {
                 let ctx = ctx.borrow();
@@ -106,12 +91,7 @@ impl MapperChip for Mapper002Uxrom {
         }
     }
 
-    fn ppu_write(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-        value: u8,
-    ) -> bool {
+    fn ppu_write(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16, value: u8) -> bool {
         match addr {
             0x0000..=0x1FFF => {
                 let mut ctx = ctx.borrow_mut();
@@ -123,12 +103,7 @@ impl MapperChip for Mapper002Uxrom {
 
     fn cpu_tick(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _cycles: u32) {}
 
-    fn ppu_tick(
-        &mut self,
-        _ctx: &Rc<RefCell<MapperContext>>,
-        _event: PpuBusEvent,
-    ) {
-    }
+    fn ppu_tick(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _event: PpuBusEvent) {}
 
     fn irq_state(&self) -> IrqState {
         self.irq_state
@@ -146,10 +121,7 @@ impl MapperChip for Mapper002Uxrom {
         let data = serde_json::json!({
             "selected_prg_bank": self.selected_prg_bank,
         });
-        MapperSaveState {
-            mapper_id: 2,
-            data,
-        }
+        MapperSaveState { mapper_id: 2, data }
     }
 
     fn load_state(&mut self, state: &MapperSaveState) {
@@ -160,9 +132,7 @@ impl MapperChip for Mapper002Uxrom {
 
     fn debug_info(&self) -> MapperDebugInfo {
         MapperDebugInfo {
-            registers: vec![
-                ("PRG Bank".into(), format!("{}", self.selected_prg_bank)),
-            ],
+            registers: vec![("PRG Bank".into(), format!("{}", self.selected_prg_bank))],
             ..Default::default()
         }
     }
@@ -262,9 +232,7 @@ mod tests {
 
     #[test]
     fn test_linkme_registration() {
-        let found = MAPPER_REGISTRY
-            .iter()
-            .any(|e| e.mapper_id == 2);
+        let found = MAPPER_REGISTRY.iter().any(|e| e.mapper_id == 2);
         assert!(found, "UxROM should be registered in MAPPER_REGISTRY");
     }
 }

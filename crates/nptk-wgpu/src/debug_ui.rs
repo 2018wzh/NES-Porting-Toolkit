@@ -17,9 +17,7 @@ use serde::{Deserialize, Serialize};
 // ---------------------------------------------------------------------------
 
 /// NES controller buttons (8 discrete buttons per port).
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum NesButton {
     A,
     B,
@@ -210,8 +208,8 @@ pub struct DebugUiState {
     pub step_frame: bool,
 
     // RAM viewer state
-    pub ram_view_start: usize,  // scroll offset in the hex dump
-    pub ram_search_addr: String, // text field for address search
+    pub ram_view_start: usize,     // scroll offset in the hex dump
+    pub ram_search_addr: String,   // text field for address search
     pub ram_highlight_dirty: bool, // highlight bytes changed since last frame
 
     // FPS tracking
@@ -507,10 +505,7 @@ impl DebugOverlay {
                             ui.monospace(format!("MASK:   {:02X}", data.ppu_mask));
                             ui.monospace(format!("STATUS: {:02X}", data.ppu_status));
                             ui.separator();
-                            ui.monospace(format!(
-                                "Scanline: {}",
-                                data.ppu_scanline
-                            ));
+                            ui.monospace(format!("Scanline: {}", data.ppu_scanline));
                             ui.monospace(format!("Cycle:    {}", data.ppu_cycle));
                             ui.monospace(format!("Dot:      {}", data.ppu_dot));
                         });
@@ -558,11 +553,7 @@ impl DebugOverlay {
                             ui.separator();
                             ui.monospace(format!(
                                 "Grayscale: {}",
-                                if mask & 0x01 != 0 {
-                                    "on"
-                                } else {
-                                    "off"
-                                }
+                                if mask & 0x01 != 0 { "on" } else { "off" }
                             ));
                             ui.monospace(format!(
                                 "Show BG left:  {}",
@@ -618,20 +609,32 @@ impl DebugOverlay {
                                         2 => "Game Over",
                                         _ => "Unknown",
                                     };
-                                    ui.monospace(format!("Mode:       {} ($0078={})", mode_str, mode));
+                                    ui.monospace(format!(
+                                        "Mode:       {} ($0078={})",
+                                        mode_str, mode
+                                    ));
                                     ui.monospace(format!("Lives:      {} ($0051)", ram[0x0051]));
                                     ui.monospace(format!("Stage:      {} ($0085)", ram[0x0085]));
                                     ui.separator();
                                     ui.monospace(format!("Player X:   {} ($00A6)", ram[0x00A6]));
                                     ui.monospace(format!("Player Y:   {} ($00A7)", ram[0x00A7]));
-                                    ui.monospace(format!("Tank State: {:02X} ($00A8)", ram[0x00A8]));
+                                    ui.monospace(format!(
+                                        "Tank State: {:02X} ($00A8)",
+                                        ram[0x00A8]
+                                    ));
                                     ui.monospace(format!("Shield:     {} ($0089)", ram[0x0089]));
                                     ui.separator();
                                     ui.monospace(format!("Enemies:    {} ($00A1)", ram[0x00A1]));
-                                    ui.monospace(format!("Block Type: {:02X} ($005C)", ram[0x005C]));
+                                    ui.monospace(format!(
+                                        "Block Type: {:02X} ($005C)",
+                                        ram[0x005C]
+                                    ));
                                     ui.monospace(format!("Power Cnt:  {} ($0019)", ram[0x0019]));
                                     ui.monospace(format!("Power Pos:  {} ($0086)", ram[0x0086]));
-                                    ui.monospace(format!("Power Sts:  {:02X} ($0049)", ram[0x0049]));
+                                    ui.monospace(format!(
+                                        "Power Sts:  {:02X} ($0049)",
+                                        ram[0x0049]
+                                    ));
                                 });
                             }
                         }
@@ -699,8 +702,7 @@ impl DebugOverlay {
                         self.input_mappings.save(&self.input_mapping_path);
                     }
                     if ui.button("Load").clicked() {
-                        self.input_mappings =
-                            InputMappings::load(&self.input_mapping_path);
+                        self.input_mappings = InputMappings::load(&self.input_mapping_path);
                     }
                     if ui.button("Reset Defaults").clicked() {
                         self.input_mappings = InputMappings::default();
@@ -739,14 +741,14 @@ impl DebugOverlay {
                     };
                     ui.label(key_display);
 
-                    if ui.button(if is_rebinding { "Cancel" } else { "Rebind" }).clicked() {
+                    if ui
+                        .button(if is_rebinding { "Cancel" } else { "Rebind" })
+                        .clicked()
+                    {
                         if is_rebinding {
                             self.rebind_state = None;
                         } else {
-                            self.rebind_state = Some(RebindState {
-                                port,
-                                button,
-                            });
+                            self.rebind_state = Some(RebindState { port, button });
                         }
                     }
 
@@ -780,18 +782,12 @@ impl DebugOverlay {
                             .hint_text("0000"),
                     );
                     if ui.button("Go").clicked() {
-                        if let Ok(addr) =
-                            u16::from_str_radix(&self.state.ram_search_addr, 16)
-                        {
-                            self.state.ram_view_start =
-                                ((addr as usize) & 0x07FF) / 16 * 16;
+                        if let Ok(addr) = u16::from_str_radix(&self.state.ram_search_addr, 16) {
+                            self.state.ram_view_start = ((addr as usize) & 0x07FF) / 16 * 16;
                         }
                     }
 
-                    ui.checkbox(
-                        &mut self.state.ram_highlight_dirty,
-                        "Highlight changes",
-                    );
+                    ui.checkbox(&mut self.state.ram_highlight_dirty, "Highlight changes");
                 });
 
                 // Hex dump

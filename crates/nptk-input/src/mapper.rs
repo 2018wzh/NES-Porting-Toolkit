@@ -3,7 +3,6 @@
 /// A mapping profile maps an input-name string (e.g. `"BTN_SOUTH"`,
 /// `"ABS_X"`) to a canonical field index.  Profiles can be serialised
 /// (via serde) and saved/loaded for user-configurable layouts.
-
 use serde::{Deserialize, Serialize};
 
 use crate::backend::RawGamepadState;
@@ -162,7 +161,10 @@ impl InputMapper {
         if entry.input_name.starts_with("BTN_") {
             // e.g. "BTN_0", "BTN_12"
             let idx: usize = entry.input_name[4..].parse().ok()?;
-            raw.buttons.get(idx).copied().map(|b| if b { 1.0 } else { 0.0 })
+            raw.buttons
+                .get(idx)
+                .copied()
+                .map(|b| if b { 1.0 } else { 0.0 })
         } else if entry.input_name.starts_with("ABS_") || entry.input_name.starts_with("AXIS_") {
             // e.g. "ABS_0", "AXIS_1"
             let idx: usize = entry.input_name[4..].parse().ok()?;

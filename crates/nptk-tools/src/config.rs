@@ -25,10 +25,18 @@ pub struct ToolConfig {
     pub log_level: String,
 }
 
-fn default_roms_path() -> String { "roms".into() }
-fn default_profiles_path() -> String { "profiles".into() }
-fn default_output_path() -> String { "generated".into() }
-fn default_log_level() -> String { "info".into() }
+fn default_roms_path() -> String {
+    "roms".into()
+}
+fn default_profiles_path() -> String {
+    "profiles".into()
+}
+fn default_output_path() -> String {
+    "generated".into()
+}
+fn default_log_level() -> String {
+    "info".into()
+}
 
 impl Default for ToolConfig {
     fn default() -> Self {
@@ -49,17 +57,23 @@ pub fn load_tool_config(path: Option<&Path>) -> ToolConfig {
     };
 
     match std::fs::read_to_string(path) {
-        Ok(contents) => {
-            match toml::de::from_str::<ToolConfig>(&contents) {
-                Ok(cfg) => cfg,
-                Err(e) => {
-                    tracing::warn!("Failed to parse tool config '{}': {}. Using defaults.", path.display(), e);
-                    ToolConfig::default()
-                }
+        Ok(contents) => match toml::de::from_str::<ToolConfig>(&contents) {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to parse tool config '{}': {}. Using defaults.",
+                    path.display(),
+                    e
+                );
+                ToolConfig::default()
             }
-        }
+        },
         Err(e) => {
-            tracing::warn!("Failed to read tool config '{}': {}. Using defaults.", path.display(), e);
+            tracing::warn!(
+                "Failed to read tool config '{}': {}. Using defaults.",
+                path.display(),
+                e
+            );
             ToolConfig::default()
         }
     }

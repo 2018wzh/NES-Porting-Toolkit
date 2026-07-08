@@ -4,8 +4,8 @@
 use wgpu::util::DeviceExt;
 
 use crate::palette::NES_PALETTE;
-use crate::tilemap::TilemapRenderer;
 use crate::sprite::SpriteRenderer;
+use crate::tilemap::TilemapRenderer;
 
 /// Which rendering path to use
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -54,9 +54,8 @@ impl WgpuRenderer {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
-        let surface: wgpu::Surface<'static> = unsafe {
-            std::mem::transmute(instance.create_surface(window)?)
-        };
+        let surface: wgpu::Surface<'static> =
+            unsafe { std::mem::transmute(instance.create_surface(window)?) };
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
@@ -133,9 +132,7 @@ impl WgpuRenderer {
                         binding: 0,
                         visibility: wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float {
-                                filterable: true,
-                            },
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
                             view_dimension: wgpu::TextureViewDimension::D2,
                             multisampled: false,
                         },
@@ -183,51 +180,47 @@ impl WgpuRenderer {
 
         let fb_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("NES FB Shader"),
-            source: wgpu::ShaderSource::Wgsl(
-                include_str!("shaders/framebuffer.wgsl").into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/framebuffer.wgsl").into()),
         });
 
-        let fb_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("NES FB Pipeline Layout"),
-                bind_group_layouts: &[&fb_bind_group_layout],
-                push_constant_ranges: &[],
-            });
+        let fb_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("NES FB Pipeline Layout"),
+            bind_group_layouts: &[&fb_bind_group_layout],
+            push_constant_ranges: &[],
+        });
 
-        let fb_pipeline =
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("NES FB Pipeline"),
-                layout: Some(&fb_pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &fb_shader,
-                    entry_point: Some("vs_main"),
-                    buffers: &[wgpu::VertexBufferLayout {
-                        array_stride: 0,
-                        step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &[],
-                    }],
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &fb_shader,
-                    entry_point: Some("fs_main"),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: surface_format,
-                        blend: Some(wgpu::BlendState::REPLACE),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleStrip,
-                    ..Default::default()
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
-                multiview: None,
-                cache: None,
-            });
+        let fb_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("NES FB Pipeline"),
+            layout: Some(&fb_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &fb_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: 0,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &fb_shader,
+                entry_point: Some("fs_main"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: surface_format,
+                    blend: Some(wgpu::BlendState::REPLACE),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleStrip,
+                ..Default::default()
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
 
         // --- Native-mode renderers ---
         let tilemap = TilemapRenderer::new(&device, surface_format);
@@ -308,8 +301,7 @@ impl WgpuRenderer {
         self.render_mode = RenderMode::Native;
 
         // Upload CHR to shared atlas texture
-        self.tilemap
-            .upload_chr(&self.device, &self.queue, chr_data);
+        self.tilemap.upload_chr(&self.device, &self.queue, chr_data);
 
         // Update palette on both renderers
         self.tilemap.update_palette(&self.queue, palette);

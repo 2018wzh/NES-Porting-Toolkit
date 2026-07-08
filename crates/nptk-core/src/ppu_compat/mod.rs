@@ -638,8 +638,7 @@ impl PpuCompat {
 mod tests {
     use super::*;
     use crate::mapper::{
-        Cartridge, CartridgeMetadata, ChrStorage, MapperChip, MapperContext,
-        MapperSaveState,
+        Cartridge, CartridgeMetadata, ChrStorage, MapperChip, MapperContext, MapperSaveState,
     };
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -650,10 +649,18 @@ mod tests {
         mirroring: Mirroring,
     }
     impl MapperChip for TestMapper {
-        fn mapper_id(&self) -> u16 { 0 }
-        fn name(&self) -> &'static str { "Test" }
-        fn cpu_read(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16) -> Option<u8> { None }
-        fn cpu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool { false }
+        fn mapper_id(&self) -> u16 {
+            0
+        }
+        fn name(&self) -> &'static str {
+            "Test"
+        }
+        fn cpu_read(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16) -> Option<u8> {
+            None
+        }
+        fn cpu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool {
+            false
+        }
         fn ppu_read(&mut self, _ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8> {
             if addr < 0x2000 {
                 let idx = (addr as usize) % self.chr.len();
@@ -662,9 +669,15 @@ mod tests {
                 None
             }
         }
-        fn ppu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool { false }
-        fn mirroring(&self) -> Mirroring { self.mirroring }
-        fn save_state(&self) -> MapperSaveState { MapperSaveState::new(0) }
+        fn ppu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool {
+            false
+        }
+        fn mirroring(&self) -> Mirroring {
+            self.mirroring
+        }
+        fn save_state(&self) -> MapperSaveState {
+            MapperSaveState::new(0)
+        }
         fn load_state(&mut self, _state: &MapperSaveState) {}
     }
 
@@ -685,12 +698,19 @@ mod tests {
         // Set up palette: color index 3 in palette 3 → address $3F0F, value = 0x20
         ppu.palette[0x0F] = 0x20;
 
-        let mapper = TestMapper { chr, mirroring: Mirroring::Horizontal };
+        let mapper = TestMapper {
+            chr,
+            mirroring: Mirroring::Horizontal,
+        };
         let mut cartridge = Cartridge::new_simple(
             CartridgeMetadata {
-                mapper_id: 0, submapper_id: 0,
-                prg_rom_size: 0, chr_rom_size: 1,
-                has_sram: false, has_trainer: false, battery_backed: false,
+                mapper_id: 0,
+                submapper_id: 0,
+                prg_rom_size: 0,
+                chr_rom_size: 1,
+                has_sram: false,
+                has_trainer: false,
+                battery_backed: false,
             },
             vec![],
             ChrStorage::Rom(vec![0; 8192]),

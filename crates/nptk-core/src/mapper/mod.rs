@@ -37,12 +37,10 @@ pub use audio::ExpansionAudio;
 pub use cartridge::{Cartridge, CartridgeMetadata};
 pub use context::MapperContext;
 pub use event_sink::{CartridgeEventSink, NullEventSink};
-pub use map_result::{
-    CpuMapResult, CpuWriteAction, PpuMapResult, PpuWriteAction,
-};
+pub use map_result::{CpuMapResult, CpuWriteAction, PpuMapResult, PpuWriteAction};
 pub use mapper_chip::MapperChip;
 pub use registry::create_mapper;
 pub use types::{
-    ChrStorage, IrqState, MapperDebugInfo, MapperSaveState, NesRegion,
-    PrgRam, PpuAccessKind, PpuBusEvent,
+    ChrStorage, IrqState, MapperDebugInfo, MapperSaveState, NesRegion, PpuAccessKind, PpuBusEvent,
+    PrgRam,
 };

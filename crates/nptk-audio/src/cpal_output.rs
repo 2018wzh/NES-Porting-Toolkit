@@ -48,18 +48,16 @@ impl CpalOutput {
         self.sample_rate = config.sample_rate.0;
 
         let stream_result = match sample_format {
-            cpal::SampleFormat::F32 => {
-                device.build_output_stream::<f32, _, _>(
-                    &config,
-                    move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                        for sample in data.iter_mut().step_by(channels as usize) {
-                            *sample = rx.try_recv().unwrap_or(0.0);
-                        }
-                    },
-                    move |err| tracing::error!("Audio error: {}", err),
-                    None,
-                )
-            }
+            cpal::SampleFormat::F32 => device.build_output_stream::<f32, _, _>(
+                &config,
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                    for sample in data.iter_mut().step_by(channels as usize) {
+                        *sample = rx.try_recv().unwrap_or(0.0);
+                    }
+                },
+                move |err| tracing::error!("Audio error: {}", err),
+                None,
+            ),
             _ => {
                 tracing::warn!("Unsupported audio format, disabling audio");
                 return None;

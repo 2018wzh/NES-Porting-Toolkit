@@ -27,7 +27,11 @@ pub fn parse_rom(data: &[u8]) -> Result<NesRom, RomError> {
     // NES 2.0 检测: byte 7 bit 2..0 = 0b1010
     let is_nes20 = (byte_7 & 0x0C) == 0x08;
 
-    let format = if is_nes20 { RomFormat::Nes20 } else { RomFormat::Ines };
+    let format = if is_nes20 {
+        RomFormat::Nes20
+    } else {
+        RomFormat::Ines
+    };
 
     let prg_units = data[4] as usize;
     let chr_units = data[5] as usize;
@@ -37,7 +41,7 @@ pub fn parse_rom(data: &[u8]) -> Result<NesRom, RomError> {
         let prg_hi = ((byte_7 >> 2) & 0x03) as usize;
         let chr_hi = ((byte_15 >> 2) & 0x03) as usize;
         let prg_mult = 16 * 1024; // 最小单位 16KB
-        let chr_mult = 8 * 1024;  // 最小单位 8KB
+        let chr_mult = 8 * 1024; // 最小单位 8KB
         let prg = if prg_units == 0 {
             // NES 2.0: 0 表示动态大小，由 PRG_HI 决定
             (prg_hi + 1) * prg_mult

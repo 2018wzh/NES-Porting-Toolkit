@@ -53,10 +53,7 @@ pub struct TilemapRenderer {
 }
 
 impl TilemapRenderer {
-    pub fn new(
-        device: &wgpu::Device,
-        surface_format: wgpu::TextureFormat,
-    ) -> Self {
+    pub fn new(device: &wgpu::Device, surface_format: wgpu::TextureFormat) -> Self {
         // --- Quad vertex buffer ---
         let quad_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Tile Quad Verts"),
@@ -106,38 +103,37 @@ impl TilemapRenderer {
         });
 
         // --- Bind group layout ---
-        let bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Tilemap Bind Group Layout"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        count: None,
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Tilemap Bind Group Layout"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
                     },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        count: None,
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
                     },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
+                    count: None,
+                },
+            ],
+        });
 
         let chr_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Tilemap Bind Group"),
@@ -161,86 +157,80 @@ impl TilemapRenderer {
         });
 
         // --- Pipeline layout ---
-        let pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Tilemap Pipeline Layout"),
-                bind_group_layouts: &[&bind_group_layout],
-                push_constant_ranges: &[],
-            });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Tilemap Pipeline Layout"),
+            bind_group_layouts: &[&bind_group_layout],
+            push_constant_ranges: &[],
+        });
 
         // --- Shader ---
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Tilemap Shader"),
-            source: wgpu::ShaderSource::Wgsl(
-                include_str!("shaders/tilemap.wgsl").into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/tilemap.wgsl").into()),
         });
 
         // --- Render pipeline ---
-        let tile_pipeline =
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Tilemap Pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vs_main"),
-                    buffers: &[
-                        // Buffer 0: quad corner offsets (per-vertex)
-                        wgpu::VertexBufferLayout {
-                            array_stride: std::mem::size_of::<QuadVertex>()
-                                as wgpu::BufferAddress,
-                            step_mode: wgpu::VertexStepMode::Vertex,
-                            attributes: &[wgpu::VertexAttribute {
+        let tile_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Tilemap Pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[
+                    // Buffer 0: quad corner offsets (per-vertex)
+                    wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<QuadVertex>() as wgpu::BufferAddress,
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &[wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        }],
+                    },
+                    // Buffer 1: tile instance data (per-instance)
+                    wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<TileInstance>() as wgpu::BufferAddress,
+                        step_mode: wgpu::VertexStepMode::Instance,
+                        attributes: &[
+                            wgpu::VertexAttribute {
                                 format: wgpu::VertexFormat::Float32x2,
                                 offset: 0,
-                                shader_location: 0,
-                            }],
-                        },
-                        // Buffer 1: tile instance data (per-instance)
-                        wgpu::VertexBufferLayout {
-                            array_stride: std::mem::size_of::<TileInstance>()
-                                as wgpu::BufferAddress,
-                            step_mode: wgpu::VertexStepMode::Instance,
-                            attributes: &[
-                                wgpu::VertexAttribute {
-                                    format: wgpu::VertexFormat::Float32x2,
-                                    offset: 0,
-                                    shader_location: 1,
-                                },
-                                wgpu::VertexAttribute {
-                                    format: wgpu::VertexFormat::Uint32,
-                                    offset: 8,
-                                    shader_location: 2,
-                                },
-                                wgpu::VertexAttribute {
-                                    format: wgpu::VertexFormat::Uint32,
-                                    offset: 12,
-                                    shader_location: 3,
-                                },
-                            ],
-                        },
-                    ],
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some("fs_main"),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: surface_format,
-                        blend: Some(wgpu::BlendState::REPLACE),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleStrip,
-                    ..Default::default()
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
-                multiview: None,
-                cache: None,
-            });
+                                shader_location: 1,
+                            },
+                            wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Uint32,
+                                offset: 8,
+                                shader_location: 2,
+                            },
+                            wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Uint32,
+                                offset: 12,
+                                shader_location: 3,
+                            },
+                        ],
+                    },
+                ],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: surface_format,
+                    blend: Some(wgpu::BlendState::REPLACE),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleStrip,
+                ..Default::default()
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
 
         TilemapRenderer {
             chr_atlas,
@@ -256,12 +246,7 @@ impl TilemapRenderer {
 
     /// Upload CHR-ROM data as a texture atlas.
     /// `chr_data` contains raw 2-bitplane tiles (16 bytes per tile).
-    pub fn upload_chr(
-        &mut self,
-        _device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        chr_data: &[u8],
-    ) {
+    pub fn upload_chr(&mut self, _device: &wgpu::Device, queue: &wgpu::Queue, chr_data: &[u8]) {
         // We need at least enough data for placeholder tiles
         let num_tiles = (chr_data.len() / 16).min(256);
         if num_tiles == 0 {
@@ -340,11 +325,7 @@ impl TilemapRenderer {
         self.tile_count = instances.len() as u32;
 
         // Upload instance data to GPU buffer
-        queue.write_buffer(
-            &self.instance_buffer,
-            0,
-            bytemuck::cast_slice(&instances),
-        );
+        queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&instances));
     }
 
     /// Render all tile instances

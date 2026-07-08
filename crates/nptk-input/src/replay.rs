@@ -3,7 +3,6 @@
 /// `InputReplay` stores a sequence of frames; each frame lists the button
 /// names active on port 1 (and optionally port 2).  The `ReplayBackend`
 /// wraps this and provides `state_for_frame()` / `advance_frame()`.
-
 use serde::{Deserialize, Serialize};
 
 use crate::nes_controller::NesControllerState;
@@ -30,13 +29,13 @@ pub struct InputReplay {
 /// `NesControllerState` and sets the appropriate field.
 fn apply_button_name(name: &str, state: &mut NesControllerState) {
     match name {
-        "A" | "a"     => state.a = true,
-        "B" | "b"     => state.b = true,
+        "A" | "a" => state.a = true,
+        "B" | "b" => state.b = true,
         "SELECT" | "select" => state.select = true,
-        "START" | "start"   => state.start = true,
-        "UP" | "up"    => state.up = true,
-        "DOWN" | "down"  => state.down = true,
-        "LEFT" | "left"  => state.left = true,
+        "START" | "start" => state.start = true,
+        "UP" | "up" => state.up = true,
+        "DOWN" | "down" => state.down = true,
+        "LEFT" | "left" => state.left = true,
         "RIGHT" | "right" => state.right = true,
         _ => {} // unknown name is silently ignored
     }

@@ -8,12 +8,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use nptk_core::mapper::registry::{MapperConstructor, MAPPER_REGISTRY};
+use nptk_core::mapper::registry::{MAPPER_REGISTRY, MapperConstructor};
 use nptk_core::mapper::types::{
     ChrStorage, IrqState, MapperDebugInfo, MapperSaveState, PpuBusEvent,
 };
-use nptk_core::rom::Mirroring;
 use nptk_core::mapper::{MapperChip, MapperContext};
+use nptk_core::rom::Mirroring;
 use nptk_core::rom::NesRom;
 
 /// CNROM (Mapper 3) 实现
@@ -26,11 +26,7 @@ pub struct Mapper003Cnrom {
 
 impl Mapper003Cnrom {
     pub fn new(rom: &NesRom) -> Self {
-        let chr_len = rom
-            .chr_rom
-            .as_ref()
-            .map(|c| c.len())
-            .unwrap_or(0);
+        let chr_len = rom.chr_rom.as_ref().map(|c| c.len()).unwrap_or(0);
         let chr_bank_count = (chr_len / 0x2000).max(1); // 8KB banks
         Mapper003Cnrom {
             selected_chr_bank: 0,
@@ -55,11 +51,7 @@ impl MapperChip for Mapper003Cnrom {
         "CNROM"
     }
 
-    fn cpu_read(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-    ) -> Option<u8> {
+    fn cpu_read(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8> {
         match addr {
             0x8000..=0xFFFF => {
                 let ctx = ctx.borrow();
@@ -74,12 +66,7 @@ impl MapperChip for Mapper003Cnrom {
         }
     }
 
-    fn cpu_write(
-        &mut self,
-        _ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-        value: u8,
-    ) -> bool {
+    fn cpu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, addr: u16, value: u8) -> bool {
         match addr {
             0x8000..=0xFFFF => {
                 // 低 2 位选择 CHR bank（部分实现使用更多位）
@@ -90,11 +77,7 @@ impl MapperChip for Mapper003Cnrom {
         }
     }
 
-    fn ppu_read(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-    ) -> Option<u8> {
+    fn ppu_read(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8> {
         match addr {
             0x0000..=0x1FFF => {
                 let ctx = ctx.borrow();
@@ -118,12 +101,7 @@ impl MapperChip for Mapper003Cnrom {
         }
     }
 
-    fn ppu_write(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-        value: u8,
-    ) -> bool {
+    fn ppu_write(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16, value: u8) -> bool {
         match addr {
             0x0000..=0x1FFF => {
                 let mut ctx = ctx.borrow_mut();
@@ -135,12 +113,7 @@ impl MapperChip for Mapper003Cnrom {
 
     fn cpu_tick(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _cycles: u32) {}
 
-    fn ppu_tick(
-        &mut self,
-        _ctx: &Rc<RefCell<MapperContext>>,
-        _event: PpuBusEvent,
-    ) {
-    }
+    fn ppu_tick(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _event: PpuBusEvent) {}
 
     fn irq_state(&self) -> IrqState {
         self.irq_state
@@ -158,10 +131,7 @@ impl MapperChip for Mapper003Cnrom {
         let data = serde_json::json!({
             "selected_chr_bank": self.selected_chr_bank,
         });
-        MapperSaveState {
-            mapper_id: 3,
-            data,
-        }
+        MapperSaveState { mapper_id: 3, data }
     }
 
     fn load_state(&mut self, state: &MapperSaveState) {
@@ -172,9 +142,7 @@ impl MapperChip for Mapper003Cnrom {
 
     fn debug_info(&self) -> MapperDebugInfo {
         MapperDebugInfo {
-            registers: vec![
-                ("CHR Bank".into(), format!("{}", self.selected_chr_bank)),
-            ],
+            registers: vec![("CHR Bank".into(), format!("{}", self.selected_chr_bank))],
             ..Default::default()
         }
     }
@@ -277,9 +245,7 @@ mod tests {
 
     #[test]
     fn test_linkme_registration() {
-        let found = MAPPER_REGISTRY
-            .iter()
-            .any(|e| e.mapper_id == 3);
+        let found = MAPPER_REGISTRY.iter().any(|e| e.mapper_id == 3);
         assert!(found, "CNROM should be registered in MAPPER_REGISTRY");
     }
 }

@@ -30,11 +30,7 @@ pub struct MapperContext {
 
 impl MapperContext {
     /// 创建新的 MapperContext
-    pub fn new(
-        prg_rom: Vec<u8>,
-        chr: ChrStorage,
-        event_sink: Box<dyn CartridgeEventSink>,
-    ) -> Self {
+    pub fn new(prg_rom: Vec<u8>, chr: ChrStorage, event_sink: Box<dyn CartridgeEventSink>) -> Self {
         MapperContext {
             prg_rom,
             chr,

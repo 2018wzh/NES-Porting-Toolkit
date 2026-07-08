@@ -3,7 +3,10 @@
 use crate::runtime::PpuEventSink;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PpuMode { Compat, TilemapNative }
+pub enum PpuMode {
+    Compat,
+    TilemapNative,
+}
 
 pub struct PpuBridge {
     pub mode: PpuMode,
@@ -22,7 +25,9 @@ impl PpuBridge {
         }
     }
 
-    pub fn framebuffer(&self) -> &[u8; 256 * 240] { &self.framebuffer }
+    pub fn framebuffer(&self) -> &[u8; 256 * 240] {
+        &self.framebuffer
+    }
 }
 
 impl PpuEventSink for PpuBridge {
@@ -34,5 +39,7 @@ impl PpuEventSink for PpuBridge {
 }
 
 impl Default for PpuBridge {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }

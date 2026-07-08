@@ -110,8 +110,7 @@ enum Commands {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
@@ -119,12 +118,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match cli.command {
         Commands::Inspect { rom, profile } => cmd_inspect(&rom, profile.as_deref()),
-        Commands::Run { rom, profile, mode, frames, frame_out } => cmd_run(&rom, profile.as_deref(), &mode, frames, frame_out.as_deref()),
-        Commands::Trace { rom, profile, input } => cmd_trace(&rom, profile.as_deref(), input.as_deref()),
-        Commands::Recompile { rom, profile, out } => cmd_recompile(&rom, profile.as_deref(), out.as_deref()),
+        Commands::Run {
+            rom,
+            profile,
+            mode,
+            frames,
+            frame_out,
+        } => cmd_run(
+            &rom,
+            profile.as_deref(),
+            &mode,
+            frames,
+            frame_out.as_deref(),
+        ),
+        Commands::Trace {
+            rom,
+            profile,
+            input,
+        } => cmd_trace(&rom, profile.as_deref(), input.as_deref()),
+        Commands::Recompile { rom, profile, out } => {
+            cmd_recompile(&rom, profile.as_deref(), out.as_deref())
+        }
         Commands::DumpChr { rom, out } => cmd_dump_chr(&rom, out.as_deref()),
-        Commands::Golden { rom, profile, input } => cmd_golden(&rom, profile.as_deref(), input.as_deref()),
-        Commands::InputTest { backend, record, mapping_wizard } => cmd_input_test(&backend, record.as_deref(), mapping_wizard.as_deref()),
+        Commands::Golden {
+            rom,
+            profile,
+            input,
+        } => cmd_golden(&rom, profile.as_deref(), input.as_deref()),
+        Commands::InputTest {
+            backend,
+            record,
+            mapping_wizard,
+        } => cmd_input_test(&backend, record.as_deref(), mapping_wizard.as_deref()),
     }
 }
 
@@ -146,7 +171,13 @@ fn cmd_inspect(rom: &str, profile: Option<&str>) -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
-fn cmd_run(rom: &str, _profile: Option<&str>, mode: &str, frames: u32, frame_out: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn cmd_run(
+    rom: &str,
+    _profile: Option<&str>,
+    mode: &str,
+    frames: u32,
+    frame_out: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Running {} in mode: {}", rom, mode);
     let data = std::fs::read(rom)?;
     let parsed = nptk_core::rom::parse_rom(&data)?;
@@ -158,7 +189,9 @@ fn cmd_run(rom: &str, _profile: Option<&str>, mode: &str, frames: u32, frame_out
     }
 }
 
-fn make_cartridge(parsed: &nptk_core::rom::NesRom) -> Result<nptk_core::mapper::Cartridge, Box<dyn std::error::Error>> {
+fn make_cartridge(
+    parsed: &nptk_core::rom::NesRom,
+) -> Result<nptk_core::mapper::Cartridge, Box<dyn std::error::Error>> {
     let mapper = nptk_core::mapper::create_mapper(parsed.header.mapper_id, parsed)
         .ok_or_else(|| format!("Mapper {} not supported", parsed.header.mapper_id))?;
     Ok(nptk_core::mapper::Cartridge::new_simple(
@@ -177,29 +210,38 @@ fn make_cartridge(parsed: &nptk_core::rom::NesRom) -> Result<nptk_core::mapper::
     ))
 }
 
-fn run_compat_interpreter(parsed: &nptk_core::rom::NesRom, frames: u32, frame_out: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
-
+fn run_compat_interpreter(
+    parsed: &nptk_core::rom::NesRom,
+    frames: u32,
+    frame_out: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let cart = make_cartridge(parsed)?;
     let bus = nptk_core::bus::NesBusImpl::new(cart);
     let mut system = nptk_core::system::NesSystem::new(bus);
 
-    println!("NES System started. Mapper: {}, PRG: {}KB, CHR: {}KB",
+    println!(
+        "NES System started. Mapper: {}, PRG: {}KB, CHR: {}KB",
         parsed.header.mapper_id,
         parsed.header.prg_rom_size / 1024,
-        parsed.header.chr_rom_size / 1024);
+        parsed.header.chr_rom_size / 1024
+    );
     println!("Running {} frames in compat-interpreter mode...", frames);
     let mut last_fb: Option<Box<[u8; 256 * 240]>> = None;
     for frame in 0..frames {
         let fb = *system.run_frame(); // copy the framebuffer
-        let fhash: u32 = fb.iter().enumerate()
+        let fhash: u32 = fb
+            .iter()
+            .enumerate()
             .map(|(i, &p)| (p as u32).wrapping_mul((i as u32 % 251) + 1))
             .fold(0, |a, b| a ^ b);
         let pc = system.cpu.pc;
         let ctrl = system.bus.ppu.ctrl;
         let mask = system.bus.ppu.mask;
         if frame < 5 || frame % 10 == 0 {
-            println!("  Frame {:2}: PC=${:04X} fhash={:08X} CTRL=${:02X} MASK=${:02X}",
-                frame, pc, fhash, ctrl, mask);
+            println!(
+                "  Frame {:2}: PC=${:04X} fhash={:08X} CTRL=${:02X} MASK=${:02X}",
+                frame, pc, fhash, ctrl, mask
+            );
         }
         last_fb = Some(Box::new(fb));
     }
@@ -222,7 +264,11 @@ fn run_compat_interpreter(parsed: &nptk_core::rom::NesRom, frames: u32, frame_ou
     Ok(())
 }
 
-fn run_recompiled_compat(parsed: &nptk_core::rom::NesRom, frames: u32, _frame_out: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn run_recompiled_compat(
+    parsed: &nptk_core::rom::NesRom,
+    frames: u32,
+    _frame_out: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("Running recompiled-compat (native dispatch + interpreter fallback)");
     let cart = make_cartridge(parsed)?;
     let bus = nptk_core::bus::NesBusImpl::new(cart);
@@ -241,24 +287,39 @@ fn run_recompiled_compat(parsed: &nptk_core::rom::NesRom, frames: u32, _frame_ou
     for frame in 0..frames {
         runtime.run_frame();
         let fb = runtime.framebuffer();
-        let fhash: u32 = fb.iter().enumerate()
+        let fhash: u32 = fb
+            .iter()
+            .enumerate()
             .map(|(i, &p)| (p as u32).wrapping_mul((i as u32 % 251) + 1))
             .fold(0, |a, b| a ^ b);
         if frame < 5 || frame % 10 == 0 {
-            println!("  Frame {:2}: fhash={:08X} blocks={}", frame, fhash, runtime.dispatch.len());
+            println!(
+                "  Frame {:2}: fhash={:08X} blocks={}",
+                frame,
+                fhash,
+                runtime.dispatch.len()
+            );
         }
     }
     Ok(())
 }
 
-fn run_native_port(parsed: &nptk_core::rom::NesRom, frames: u32, _frame_out: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn run_native_port(
+    parsed: &nptk_core::rom::NesRom,
+    frames: u32,
+    _frame_out: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("Running native-port (recompiled + native WGPU rendering)");
     // For now, native-port delegates to recompiled-compat with native render mode
     // Full implementation requires WGPU render pipeline integration
     run_recompiled_compat(parsed, frames, _frame_out)
 }
 
-fn cmd_trace(rom: &str, _profile: Option<&str>, _input: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn cmd_trace(
+    rom: &str,
+    _profile: Option<&str>,
+    _input: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let data = std::fs::read(rom)?;
     let parsed = nptk_core::rom::parse_rom(&data)?;
     let cart = make_cartridge(&parsed)?;
@@ -270,15 +331,28 @@ fn cmd_trace(rom: &str, _profile: Option<&str>, _input: Option<&str>) -> Result<
         let pc_before = system.cpu.pc;
         let opcode = system.bus.cpu_read(pc_before);
         let cycles = system.step_cpu();
-        println!("  {:4}: PC=${:04X} OP=${:02X} A=${:02X} X=${:02X} Y=${:02X} SP=${:02X} P=${:02X} cy={}",
-            i, pc_before, opcode, system.cpu.a, system.cpu.x, system.cpu.y,
-            system.cpu.sp, system.cpu.status.to_byte(), cycles);
+        println!(
+            "  {:4}: PC=${:04X} OP=${:02X} A=${:02X} X=${:02X} Y=${:02X} SP=${:02X} P=${:02X} cy={}",
+            i,
+            pc_before,
+            opcode,
+            system.cpu.a,
+            system.cpu.x,
+            system.cpu.y,
+            system.cpu.sp,
+            system.cpu.status.to_byte(),
+            cycles
+        );
     }
 
     Ok(())
 }
 
-fn cmd_recompile(rom: &str, _profile: Option<&str>, out: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn cmd_recompile(
+    rom: &str,
+    _profile: Option<&str>,
+    out: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let data = std::fs::read(rom)?;
     let parsed = nptk_core::rom::parse_rom(&data)?;
     let out_dir = out.unwrap_or("generated");
@@ -292,11 +366,18 @@ fn cmd_recompile(rom: &str, _profile: Option<&str>, out: Option<&str>) -> Result
     let nmi_vec = prg[end - 6] as u16 | ((prg[end - 5] as u16) << 8);
     let reset_vec = prg[end - 4] as u16 | ((prg[end - 3] as u16) << 8);
     let irq_vec = prg[end - 2] as u16 | ((prg[end - 1] as u16) << 8);
-    println!("RESET: ${:04X}  NMI: ${:04X}  IRQ: ${:04X}", reset_vec, nmi_vec, irq_vec);
+    println!(
+        "RESET: ${:04X}  NMI: ${:04X}  IRQ: ${:04X}",
+        reset_vec, nmi_vec, irq_vec
+    );
 
     // Map CPU addr → PRG offset
     let to_offset = |addr: u16| -> Option<usize> {
-        if addr < 0x8000 { None } else { Some((addr as usize - 0x8000) % prg.len()) }
+        if addr < 0x8000 {
+            None
+        } else {
+            Some((addr as usize - 0x8000) % prg.len())
+        }
     };
 
     // Disassemble each entry point using disasm6502::from_addr_array
@@ -308,25 +389,27 @@ fn cmd_recompile(rom: &str, _profile: Option<&str>, out: Option<&str>) -> Result
                     for insn in insns.iter().take(30) {
                         println!("  {}", insn);
                     }
-                    if insns.len() > 30 { println!("  ... ({} more)", insns.len() - 30); }
+                    if insns.len() > 30 {
+                        println!("  ... ({} more)", insns.len() - 30);
+                    }
                 }
                 Err(e) => println!("  disasm error: {}", e),
             }
         }
     }
 
-//     // Count total disassembled instructions
-//     let mut total = 0u64;
-//     let mut addr = 0x8000u16;
-//     while (addr as usize) < 0x100000 {
-//         if let Some(off) = to_offset(addr) {
-//             if let Ok(insns) = disasm6502::from_addr_array(&prg[off..], addr) {
-//                 for _ in insns.iter() { total += 1; }
-//             }
-//             addr = addr.saturating_add(1);
-//         } else { break; }
-//     }
-//     println!("\nTotal: ~{} instructions reachable", total);
+    //     // Count total disassembled instructions
+    //     let mut total = 0u64;
+    //     let mut addr = 0x8000u16;
+    //     while (addr as usize) < 0x100000 {
+    //         if let Some(off) = to_offset(addr) {
+    //             if let Ok(insns) = disasm6502::from_addr_array(&prg[off..], addr) {
+    //                 for _ in insns.iter() { total += 1; }
+    //             }
+    //             addr = addr.saturating_add(1);
+    //         } else { break; }
+    //     }
+    //     println!("\nTotal: ~{} instructions reachable", total);
 
     // Generate native code using Cranelift AOT from PRG-ROM blocks
     println!("\nGenerating native code...");
@@ -367,14 +450,21 @@ fn cmd_recompile(rom: &str, _profile: Option<&str>, out: Option<&str>) -> Result
 
     // BFS block discovery from entry points
     while let Some(addr) = queue.pop_front() {
-        if visited.contains(&addr) || addr < 0x8000 { continue; }
+        if visited.contains(&addr) || addr < 0x8000 {
+            continue;
+        }
         visited.insert(addr);
 
         let mut block_bytes = Vec::new();
         let mut scan = addr;
         loop {
-            let off = match to_offset(scan) { Some(o) => o, None => break };
-            if off >= prg.len() { break; }
+            let off = match to_offset(scan) {
+                Some(o) => o,
+                None => break,
+            };
+            if off >= prg.len() {
+                break;
+            }
             let b = prg[off];
             let len = insn_len(b);
             let next = scan.wrapping_add(len);
@@ -389,13 +479,15 @@ fn cmd_recompile(rom: &str, _profile: Option<&str>, out: Option<&str>) -> Result
             // Determine if this instruction terminates the block
             let is_terminal = match b {
                 // RTS, RTI, BRK — return to caller
-                0x60|0x40|0x00 => true,
+                0x60 | 0x40 | 0x00 => true,
                 // JMP absolute — unconditional jump
                 0x4C => {
                     let lo = prg.get(off + 1).copied().unwrap_or(0) as u16;
                     let hi = prg.get(off + 2).copied().unwrap_or(0) as u16;
                     let target = lo | (hi << 8);
-                    if target >= 0x8000 { queue.push_back(target); }
+                    if target >= 0x8000 {
+                        queue.push_back(target);
+                    }
                     true
                 }
                 // JMP indirect (0x6C) — resolved at runtime, need interpreter fallback
@@ -405,28 +497,35 @@ fn cmd_recompile(rom: &str, _profile: Option<&str>, out: Option<&str>) -> Result
                     let lo = prg.get(off + 1).copied().unwrap_or(0) as u16;
                     let hi = prg.get(off + 2).copied().unwrap_or(0) as u16;
                     let target = lo | (hi << 8);
-                    if target >= 0x8000 { queue.push_back(target); }
+                    if target >= 0x8000 {
+                        queue.push_back(target);
+                    }
                     // Return address is fallthrough
                     queue.push_back(next);
                     true
                 }
                 // Conditional branches — both taken and not-taken
-                0x10|0x30|0x50|0x70|0x90|0xB0|0xD0|0xF0 => {
+                0x10 | 0x30 | 0x50 | 0x70 | 0x90 | 0xB0 | 0xD0 | 0xF0 => {
                     let offset = prg.get(off + 1).copied().unwrap_or(0) as i8;
                     // Correct sign-extended offset
                     let taken = ((next as i32) + (offset as i32)) as u16;
-                    if taken >= 0x8000 { queue.push_back(taken); }
+                    if taken >= 0x8000 {
+                        queue.push_back(taken);
+                    }
                     queue.push_back(next); // not-taken
                     true
                 }
                 _ => false,
             };
             scan = next;
-            if is_terminal { break; }
+            if is_terminal {
+                break;
+            }
         }
         if !block_bytes.is_empty() {
             let ir_ops = IrBuilder::lift_block(&block_bytes, addr);
-            aot.compile_block(addr, &ir_ops).map_err(|e| format!("compile block ${:04X}: {}", addr, e))?;
+            aot.compile_block(addr, &ir_ops)
+                .map_err(|e| format!("compile block ${:04X}: {}", addr, e))?;
             block_count += 1;
         }
     }
@@ -434,8 +533,8 @@ fn cmd_recompile(rom: &str, _profile: Option<&str>, out: Option<&str>) -> Result
     println!("  Extracted {} basic blocks", block_count);
 
     // Finish compilation and write .o file
-    let (obj_bytes, compiled_blocks, _block_names) = aot.finish()
-        .map_err(|e| format!("aot.finish: {}", e))?;
+    let (obj_bytes, compiled_blocks, _block_names) =
+        aot.finish().map_err(|e| format!("aot.finish: {}", e))?;
     let obj_path = format!("{}/blocks.o", out_dir);
     std::fs::write(&obj_path, &obj_bytes)?;
 
@@ -449,7 +548,8 @@ fn cmd_recompile(rom: &str, _profile: Option<&str>, out: Option<&str>) -> Result
     // Ensure Cargo.toml exists
     let gen_cargo_path = format!("{}/Cargo.toml", out_dir);
     if !std::path::Path::new(&gen_cargo_path).exists() {
-        let cargo_toml = format!(r#"[package]
+        let cargo_toml = format!(
+            r#"[package]
 name = "generated-battle-city"
 version = "0.1.0"
 edition = "2024"
@@ -461,7 +561,8 @@ nptk-native-runtime = {{ path = "../../crates/nptk-native-runtime" }}
 [lib]
 name = "generated_battle_city"
 path = "src/lib.rs"
-"#);
+"#
+        );
         std::fs::write(&gen_cargo_path, &cargo_toml)?;
     }
 
@@ -518,7 +619,10 @@ fn cmd_dump_chr(rom: &str, out: Option<&str>) -> Result<(), Box<dyn std::error::
             }
         }
         img.save(path)?;
-        println!("CHR atlas: {} tiles, {}x{} saved to {}", n_tiles, cols, rows, path);
+        println!(
+            "CHR atlas: {} tiles, {}x{} saved to {}",
+            n_tiles, cols, rows, path
+        );
     } else if parsed.has_chr_ram {
         println!("ROM uses CHR-RAM (no static CHR-ROM data)");
     }
@@ -526,7 +630,11 @@ fn cmd_dump_chr(rom: &str, out: Option<&str>) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
-fn cmd_golden(rom: &str, profile_path: Option<&str>, input_path: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn cmd_golden(
+    rom: &str,
+    profile_path: Option<&str>,
+    input_path: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let data = std::fs::read(rom)?;
     let parsed = nptk_core::rom::parse_rom(&data)?;
     let cart = make_cartridge(&parsed)?;
@@ -549,7 +657,9 @@ fn cmd_golden(rom: &str, profile_path: Option<&str>, input_path: Option<&str>) -
         let profile_data = std::fs::read_to_string(profile_file)?;
         let profile: nptk_profile::profile::GameProfile = toml::from_str(&profile_data)?;
         // Check for a tests.ron file next to the profile
-        let profile_dir = std::path::Path::new(profile_file).parent().unwrap_or(std::path::Path::new("."));
+        let profile_dir = std::path::Path::new(profile_file)
+            .parent()
+            .unwrap_or(std::path::Path::new("."));
         let tests_path = profile_dir.join("tests.ron");
         if tests_path.exists() {
             let tests_data = std::fs::read_to_string(tests_path)?;
@@ -566,7 +676,10 @@ fn cmd_golden(rom: &str, profile_path: Option<&str>, input_path: Option<&str>) -
                     }
                 }
                 expected_hashes = Some(hashes);
-                println!("Loaded {} expected frame hashes from tests.ron", tests.golden_frames.len());
+                println!(
+                    "Loaded {} expected frame hashes from tests.ron",
+                    tests.golden_frames.len()
+                );
             }
         }
         let _ = profile; // suppress unused warning
@@ -584,7 +697,9 @@ fn cmd_golden(rom: &str, profile_path: Option<&str>, input_path: Option<&str>) -
         }
 
         let fb = system.run_frame();
-        let fhash: u32 = fb.iter().enumerate()
+        let fhash: u32 = fb
+            .iter()
+            .enumerate()
             .map(|(i, &p)| (p as u32).wrapping_mul((i as u32 % 251) + 1))
             .fold(0, |a, b| a ^ b);
 
@@ -593,11 +708,17 @@ fn cmd_golden(rom: &str, profile_path: Option<&str>, input_path: Option<&str>) -
                 if fhash == expected[frame] {
                     println!("  frame {:4}: fhash={:08X} ✓", frame, fhash);
                 } else {
-                    println!("  frame {:4}: fhash={:08X} ✗ (expected {:08X})", frame, fhash, expected[frame]);
+                    println!(
+                        "  frame {:4}: fhash={:08X} ✗ (expected {:08X})",
+                        frame, fhash, expected[frame]
+                    );
                     all_pass = false;
                 }
             } else {
-                println!("  frame {:4}: fhash={:08X} (no expected hash)", frame, fhash);
+                println!(
+                    "  frame {:4}: fhash={:08X} (no expected hash)",
+                    frame, fhash
+                );
             }
         } else {
             println!("  frame {:4}: fhash={:08X}", frame, fhash);
@@ -612,7 +733,11 @@ fn cmd_golden(rom: &str, profile_path: Option<&str>, input_path: Option<&str>) -
     Ok(())
 }
 
-fn cmd_input_test(backend: &str, _record: Option<&str>, _mapping_wizard: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn cmd_input_test(
+    backend: &str,
+    _record: Option<&str>,
+    _mapping_wizard: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("Input test: backend={}", backend);
     println!("Available backends:");
     println!("  - winit_keyboard (platform keyboard events)");
@@ -623,4 +748,6 @@ fn cmd_input_test(backend: &str, _record: Option<&str>, _mapping_wizard: Option<
 }
 // Debug helper
 #[allow(dead_code)]
-fn count_nonzero(data: &[u8]) -> usize { data.iter().filter(|&&b| b != 0).count() }
+fn count_nonzero(data: &[u8]) -> usize {
+    data.iter().filter(|&&b| b != 0).count()
+}

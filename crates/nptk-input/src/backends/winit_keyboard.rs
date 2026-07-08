@@ -6,8 +6,8 @@
 //! with `poll()`.
 
 use crate::backend::{
-    keyboard_to_canonical, InputBackend, InputBackendKind, InputDeviceInfo, PhysicalDeviceId,
-    RawGamepadState,
+    InputBackend, InputBackendKind, InputDeviceInfo, PhysicalDeviceId, RawGamepadState,
+    keyboard_to_canonical,
 };
 use crate::canonical::CanonicalGamepadState;
 

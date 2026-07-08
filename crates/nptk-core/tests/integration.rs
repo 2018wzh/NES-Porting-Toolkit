@@ -26,9 +26,13 @@ fn make_system(prg: &[u8]) -> NesSystem {
         .unwrap_or_else(|| nptk_core::mapper::registry::builtin_nrom(&rom));
     let cartridge = nptk_core::mapper::Cartridge::new_simple(
         nptk_core::mapper::CartridgeMetadata {
-            mapper_id: 0, submapper_id: 0,
-            prg_rom_size: 1, chr_rom_size: 1,
-            has_sram: false, has_trainer: false, battery_backed: false,
+            mapper_id: 0,
+            submapper_id: 0,
+            prg_rom_size: 1,
+            chr_rom_size: 1,
+            has_sram: false,
+            has_trainer: false,
+            battery_backed: false,
         },
         rom.prg_rom.clone(),
         nptk_core::mapper::ChrStorage::Rom(rom.chr_rom.clone().unwrap_or_default()),
@@ -142,8 +146,8 @@ fn test_controller_strobe_and_read() {
 fn test_multiple_frames_deterministic() {
     // Simple program that writes incrementing values to RAM
     let prg = &[
-        0xA9, 0x01,       // LDA #$01
-        0x85, 0x50,       // STA $50
+        0xA9, 0x01, // LDA #$01
+        0x85, 0x50, // STA $50
         0x4C, 0x00, 0x80, // JMP $8000
     ];
 
@@ -152,7 +156,9 @@ fn test_multiple_frames_deterministic() {
         let mut hashes = Vec::new();
         for _ in 0..3 {
             let fb = sys.run_frame();
-            let hash: u64 = fb.iter().enumerate()
+            let hash: u64 = fb
+                .iter()
+                .enumerate()
                 .map(|(i, &b)| (b as u64).wrapping_mul(i as u64 + 1))
                 .fold(0, |a, b| a ^ b);
             hashes.push(hash);

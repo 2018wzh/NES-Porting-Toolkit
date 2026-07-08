@@ -15,10 +15,16 @@ impl InputBridge {
         }
     }
 
-    pub fn set_port1(&mut self, state: NesControllerState) { self.port1 = state; }
-    pub fn set_port2(&mut self, state: NesControllerState) { self.port2 = state; }
+    pub fn set_port1(&mut self, state: NesControllerState) {
+        self.port1 = state;
+    }
+    pub fn set_port2(&mut self, state: NesControllerState) {
+        self.port2 = state;
+    }
 }
 
 impl Default for InputBridge {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }

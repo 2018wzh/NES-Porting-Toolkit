@@ -80,7 +80,10 @@ impl AudioRouter {
 
     /// Whether to use native SFX via Kira.
     pub fn use_native_sfx(&self) -> bool {
-        matches!(self.policy, AudioPolicy::NativeSfx | AudioPolicy::NativeFull)
+        matches!(
+            self.policy,
+            AudioPolicy::NativeSfx | AudioPolicy::NativeFull
+        )
     }
 
     /// Whether to use native BGM via Kira.

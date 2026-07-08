@@ -1,9 +1,9 @@
 //! Battle City 原生运行时
 //! 组合 nes-core 与各个原生子系统
 
+use crate::game_state::BattleCityStateView;
 use nptk_core::mapper::{Cartridge, CartridgeMetadata, ChrStorage};
 use nptk_core::rom::NesRom;
-use crate::game_state::BattleCityStateView;
 
 /// Battle City 原生移植运行时
 pub struct BattleCityRuntime {
@@ -159,7 +159,11 @@ mod tests {
         let ppu = &system.bus.ppu;
         let raw_fb = ppu.frame();
         let non_zero = raw_fb.iter().filter(|&&b| b != 0).count();
-        assert!(non_zero > 100, "Title screen should have visible pixels (got {})", non_zero);
+        assert!(
+            non_zero > 100,
+            "Title screen should have visible pixels (got {})",
+            non_zero
+        );
     }
 
     #[test]

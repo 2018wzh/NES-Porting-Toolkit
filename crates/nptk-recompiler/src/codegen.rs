@@ -525,7 +525,9 @@ fn translate_op(
             bcx, bus_ptr, cpu_ptr, *addr, false, false, read8_ref, write8_ref,
         ),
 
-        IrOp::Branch { condition, target } => translate_branch(bcx, cpu_ptr, *condition, *target, *total_cycles),
+        IrOp::Branch { condition, target } => {
+            translate_branch(bcx, cpu_ptr, *condition, *target, *total_cycles)
+        }
 
         IrOp::Jump(target) => {
             let result = pack_return(bcx, *target, *total_cycles);
@@ -585,9 +587,16 @@ fn translate_op(
             Ok(())
         }
 
-        IrOp::SetFlag { flag, value } => {
-            translate_set_flag(bcx, cpu_ptr, bus_ptr, *flag, *value, read8_ref, write8_ref, total_cycles)
-        }
+        IrOp::SetFlag { flag, value } => translate_set_flag(
+            bcx,
+            cpu_ptr,
+            bus_ptr,
+            *flag,
+            *value,
+            read8_ref,
+            write8_ref,
+            total_cycles,
+        ),
 
         IrOp::AdvanceCycles(n) => {
             let cycles_val = bcx.ins().iconst(I32, *n as i64);

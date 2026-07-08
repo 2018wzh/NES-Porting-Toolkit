@@ -1,7 +1,6 @@
 /// `HotplugManager` tracks device connection state and debounces
 /// connect / disconnect events so the rest of the system only hears about
 /// *actual* changes, not repeat notifications.
-
 use std::collections::HashSet;
 
 use crate::backend::InputDeviceInfo;

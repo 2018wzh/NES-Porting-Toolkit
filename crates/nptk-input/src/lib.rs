@@ -3,14 +3,14 @@
 
 pub mod backend;
 pub mod canonical;
+pub mod hotplug;
 pub mod mapper;
 pub mod nes_controller;
 pub mod replay;
-pub mod hotplug;
 
 pub mod backends {
     //! Concrete input backend implementations
-    pub mod winit_keyboard;
     pub mod gilrs_gamepad;
     pub mod hidapi_generic;
+    pub mod winit_keyboard;
 }

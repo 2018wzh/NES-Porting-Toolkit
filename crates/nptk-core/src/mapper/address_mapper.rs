@@ -3,9 +3,7 @@
 //! 将 CPU/PPU 地址翻译为具体的映射目标，与 MapperChip 的副作用逻辑分离。
 //! 简单 Mapper 可以直接基于 AddressMapper 实现 MapperChip。
 
-use super::map_result::{
-    CpuMapResult, CpuWriteAction, PpuMapResult, PpuWriteAction,
-};
+use super::map_result::{CpuMapResult, CpuWriteAction, PpuMapResult, PpuWriteAction};
 
 /// 地址翻译器 — 将 CPU/PPU 地址映射到具体存储或寄存器
 pub trait AddressMapper {

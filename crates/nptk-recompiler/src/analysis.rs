@@ -33,10 +33,7 @@ pub fn is_code_start(data: &[u8], addr: u16) -> bool {
 ///
 /// `code_addrs` is the set of addresses visited during BFS block discovery.
 /// Any byte not in this set is classified as Data.
-pub fn classify_bytes(
-    prg_size: usize,
-    code_addrs: &HashSet<u16>,
-) -> Vec<ByteType> {
+pub fn classify_bytes(prg_size: usize, code_addrs: &HashSet<u16>) -> Vec<ByteType> {
     let mut result = vec![ByteType::Unknown; prg_size];
 
     for &addr in code_addrs {
@@ -217,8 +214,8 @@ mod tests {
         let mut code = HashSet::new();
         code.insert(0x8000);
         let result = classify_bytes(256, &code);
-        assert_eq!(result[0], ByteType::Code);       // 0x8000 -> offset 0
-        assert_eq!(result[1], ByteType::Data);       // not in code set
+        assert_eq!(result[0], ByteType::Code); // 0x8000 -> offset 0
+        assert_eq!(result[1], ByteType::Data); // not in code set
     }
 
     #[test]
@@ -239,9 +236,12 @@ mod tests {
         data[2] = 0x80;
         // Vectors at end: NMI=$8100, RESET=$8200, IRQ=$8300
         let end = data.len();
-        data[end - 6] = 0x00; data[end - 5] = 0x81;
-        data[end - 4] = 0x00; data[end - 3] = 0x82;
-        data[end - 2] = 0x00; data[end - 1] = 0x83;
+        data[end - 6] = 0x00;
+        data[end - 5] = 0x81;
+        data[end - 4] = 0x00;
+        data[end - 3] = 0x82;
+        data[end - 2] = 0x00;
+        data[end - 1] = 0x83;
 
         let entries = collect_entry_points(&data, 0x8000);
         assert!(entries.contains(&0x8100)); // NMI vector

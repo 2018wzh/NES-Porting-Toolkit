@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
+pub mod hooks;
 pub mod profile;
 pub mod symbols;
-pub mod hooks;
 pub mod validation;

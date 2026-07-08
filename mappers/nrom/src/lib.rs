@@ -8,12 +8,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use nptk_core::mapper::registry::{MapperConstructor, MAPPER_REGISTRY};
+use nptk_core::mapper::registry::{MAPPER_REGISTRY, MapperConstructor};
 use nptk_core::mapper::types::{
     ChrStorage, IrqState, MapperDebugInfo, MapperSaveState, PpuBusEvent,
 };
-use nptk_core::rom::Mirroring;
 use nptk_core::mapper::{MapperChip, MapperContext};
+use nptk_core::rom::Mirroring;
 use nptk_core::rom::NesRom;
 
 /// NROM (Mapper 0) 实现
@@ -43,11 +43,7 @@ impl MapperChip for Mapper000Nrom {
         "NROM"
     }
 
-    fn cpu_read(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-    ) -> Option<u8> {
+    fn cpu_read(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8> {
         match addr {
             0x8000..=0xFFFF => {
                 let ctx = ctx.borrow();
@@ -66,21 +62,12 @@ impl MapperChip for Mapper000Nrom {
         }
     }
 
-    fn cpu_write(
-        &mut self,
-        _ctx: &Rc<RefCell<MapperContext>>,
-        _addr: u16,
-        _value: u8,
-    ) -> bool {
+    fn cpu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool {
         // NROM 没有 PRG 写入
         false
     }
 
-    fn ppu_read(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-    ) -> Option<u8> {
+    fn ppu_read(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8> {
         match addr {
             0x0000..=0x1FFF => {
                 let ctx = ctx.borrow();
@@ -105,12 +92,7 @@ impl MapperChip for Mapper000Nrom {
         }
     }
 
-    fn ppu_write(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-        value: u8,
-    ) -> bool {
+    fn ppu_write(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16, value: u8) -> bool {
         match addr {
             0x0000..=0x1FFF => {
                 let mut ctx = ctx.borrow_mut();
@@ -122,12 +104,7 @@ impl MapperChip for Mapper000Nrom {
 
     fn cpu_tick(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _cycles: u32) {}
 
-    fn ppu_tick(
-        &mut self,
-        _ctx: &Rc<RefCell<MapperContext>>,
-        _event: PpuBusEvent,
-    ) {
-    }
+    fn ppu_tick(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _event: PpuBusEvent) {}
 
     fn irq_state(&self) -> IrqState {
         self.irq_state
@@ -240,9 +217,7 @@ mod tests {
 
     #[test]
     fn test_linkme_registration() {
-        let found = MAPPER_REGISTRY
-            .iter()
-            .any(|e| e.mapper_id == 0);
+        let found = MAPPER_REGISTRY.iter().any(|e| e.mapper_id == 0);
         assert!(found, "NROM should be registered in MAPPER_REGISTRY");
     }
 }

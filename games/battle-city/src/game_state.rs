@@ -86,9 +86,9 @@ mod tests {
     #[test]
     fn test_state_view_reads() {
         let mut ram = [0u8; 0x800];
-        ram[0x0051] = 3;     // 3 lives
-        ram[0x0085] = 5;     // stage 5
-        ram[0x0078] = 1;     // playing
+        ram[0x0051] = 3; // 3 lives
+        ram[0x0085] = 5; // stage 5
+        ram[0x0078] = 1; // playing
 
         let state = BattleCityStateView::new(&ram);
         assert_eq!(state.lives(), 3);

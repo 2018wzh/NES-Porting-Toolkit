@@ -126,16 +126,29 @@ impl HidApiBackend {
                 }
             ),
             buttons: vec![
-                canonical.south, canonical.east, canonical.west, canonical.north,
-                canonical.left_shoulder, canonical.right_shoulder,
-                canonical.select, canonical.start, canonical.guide,
-                canonical.left_stick_button, canonical.right_stick_button,
-                canonical.dpad_up, canonical.dpad_down, canonical.dpad_left, canonical.dpad_right,
+                canonical.south,
+                canonical.east,
+                canonical.west,
+                canonical.north,
+                canonical.left_shoulder,
+                canonical.right_shoulder,
+                canonical.select,
+                canonical.start,
+                canonical.guide,
+                canonical.left_stick_button,
+                canonical.right_stick_button,
+                canonical.dpad_up,
+                canonical.dpad_down,
+                canonical.dpad_left,
+                canonical.dpad_right,
             ],
             axes: vec![
-                canonical.left_trigger, canonical.right_trigger,
-                canonical.left_stick[0], canonical.left_stick[1],
-                canonical.right_stick[0], canonical.right_stick[1],
+                canonical.left_trigger,
+                canonical.right_trigger,
+                canonical.left_stick[0],
+                canonical.left_stick[1],
+                canonical.right_stick[0],
+                canonical.right_stick[1],
             ],
             timestamp_ns: now_ns,
         };
@@ -163,23 +176,18 @@ impl InputBackend for HidApiBackend {
             }
 
             let path = dev_info.path().to_string_lossy().to_string();
-            let dev_id = *self
-                .device_map
-                .entry(path.clone())
-                .or_insert_with(|| {
-                    let id = PhysicalDeviceId {
-                        backend: InputBackendKind::HidApi,
-                        local_id: self.next_local_id,
-                    };
-                    self.next_local_id += 1;
-                    id
-                });
+            let dev_id = *self.device_map.entry(path.clone()).or_insert_with(|| {
+                let id = PhysicalDeviceId {
+                    backend: InputBackendKind::HidApi,
+                    local_id: self.next_local_id,
+                };
+                self.next_local_id += 1;
+                id
+            });
 
             // Open device and poll
             if let Ok(dev) = dev_info.open_device(api) {
-                if let Some((canonical, raw)) =
-                    self.poll_device(&path, &dev, dev_id, now_ns)
-                {
+                if let Some((canonical, raw)) = self.poll_device(&path, &dev, dev_id, now_ns) {
                     let changed = self
                         .last_states
                         .get(&path)
@@ -195,7 +203,9 @@ impl InputBackend for HidApiBackend {
     }
 
     fn connected_devices(&self) -> Vec<InputDeviceInfo> {
-        let Some(ref api) = self.api else { return Vec::new() };
+        let Some(ref api) = self.api else {
+            return Vec::new();
+        };
 
         api.device_list()
             .filter(|d| d.usage_page() == 0x01 && (d.usage() == 0x04 || d.usage() == 0x05))

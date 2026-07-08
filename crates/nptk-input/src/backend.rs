@@ -54,24 +54,24 @@ pub fn keyboard_to_canonical(key_name: &str, pressed: bool, state: &mut Canonica
     let v = pressed;
     match key_name {
         // D-pad
-        "w" | "W" | "ArrowUp"    => state.dpad_up = v,
-        "s" | "S" | "ArrowDown"  => state.dpad_down = v,
-        "a" | "A" | "ArrowLeft"  => state.dpad_left = v,
+        "w" | "W" | "ArrowUp" => state.dpad_up = v,
+        "s" | "S" | "ArrowDown" => state.dpad_down = v,
+        "a" | "A" | "ArrowLeft" => state.dpad_left = v,
         "d" | "D" | "ArrowRight" => state.dpad_right = v,
         // NES action buttons (Z=A / X=B)
         "z" | "Z" => state.south = v,
         "x" | "X" => state.east = v,
         // Start / Select
-        "Enter"      => state.start = v,
-        " "          => state.start = v,
-        "RShift"     => state.select = v,
+        "Enter" => state.start = v,
+        " " => state.start = v,
+        "RShift" => state.select = v,
         // Shoulder / triggers (mapped to Q / E for convenience)
         "q" | "Q" => state.left_shoulder = v,
         "e" | "E" => state.right_shoulder = v,
         // Guide / stick buttons (sensible defaults)
-        "Tab"             => state.guide = v,
-        "LControl"        => state.left_stick_button = v,
-        "RControl"        => state.right_stick_button = v,
+        "Tab" => state.guide = v,
+        "LControl" => state.left_stick_button = v,
+        "RControl" => state.right_stick_button = v,
         // Face buttons W / N (NES-style alternate mapping)
         "n" | "N" => state.west = v,
         "m" | "M" => state.north = v,

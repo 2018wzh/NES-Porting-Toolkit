@@ -75,14 +75,20 @@ pub fn builtin_nrom(rom: &NesRom) -> Box<dyn MapperChip> {
     }
 
     impl MapperChip for BuiltinNrom {
-        fn mapper_id(&self) -> u16 { 0 }
-        fn name(&self) -> &'static str { "NROM (builtin)" }
+        fn mapper_id(&self) -> u16 {
+            0
+        }
+        fn name(&self) -> &'static str {
+            "NROM (builtin)"
+        }
         fn cpu_read(&mut self, ctx: &Rc<RefCell<super::MapperContext>>, addr: u16) -> Option<u8> {
             match addr {
                 0x8000..=0xFFFF => {
                     let ctx = ctx.borrow();
                     let prg = &ctx.prg_rom;
-                    if prg.is_empty() { return Some(0); }
+                    if prg.is_empty() {
+                        return Some(0);
+                    }
                     let offset = if self.is_16k {
                         (addr as usize - 0x8000) & 0x3FFF
                     } else {
@@ -93,7 +99,14 @@ pub fn builtin_nrom(rom: &NesRom) -> Box<dyn MapperChip> {
                 _ => None,
             }
         }
-        fn cpu_write(&mut self, _ctx: &Rc<RefCell<super::MapperContext>>, _addr: u16, _value: u8) -> bool { false }
+        fn cpu_write(
+            &mut self,
+            _ctx: &Rc<RefCell<super::MapperContext>>,
+            _addr: u16,
+            _value: u8,
+        ) -> bool {
+            false
+        }
         fn ppu_read(&mut self, ctx: &Rc<RefCell<super::MapperContext>>, addr: u16) -> Option<u8> {
             match addr {
                 0x0000..=0x1FFF => {
@@ -103,7 +116,12 @@ pub fn builtin_nrom(rom: &NesRom) -> Box<dyn MapperChip> {
                 _ => None,
             }
         }
-        fn ppu_write(&mut self, ctx: &Rc<RefCell<super::MapperContext>>, addr: u16, value: u8) -> bool {
+        fn ppu_write(
+            &mut self,
+            ctx: &Rc<RefCell<super::MapperContext>>,
+            addr: u16,
+            value: u8,
+        ) -> bool {
             match addr {
                 0x0000..=0x1FFF => {
                     let mut ctx = ctx.borrow_mut();
@@ -112,13 +130,20 @@ pub fn builtin_nrom(rom: &NesRom) -> Box<dyn MapperChip> {
                 _ => false,
             }
         }
-        fn mirroring(&self) -> Mirroring { self.mirroring }
-        fn save_state(&self) -> super::MapperSaveState { super::MapperSaveState::new(0) }
+        fn mirroring(&self) -> Mirroring {
+            self.mirroring
+        }
+        fn save_state(&self) -> super::MapperSaveState {
+            super::MapperSaveState::new(0)
+        }
         fn load_state(&mut self, _state: &super::MapperSaveState) {}
     }
 
     let is_16k = rom.prg_rom.len() <= 16_384;
-    Box::new(BuiltinNrom { mirroring: rom.header.mirroring, is_16k })
+    Box::new(BuiltinNrom {
+        mirroring: rom.header.mirroring,
+        is_16k,
+    })
 }
 
 #[cfg(test)]

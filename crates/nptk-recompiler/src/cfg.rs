@@ -39,13 +39,16 @@ impl Cfg {
 
     pub fn add_block(&mut self, start: u16, end: u16) -> BlockId {
         let id = self.blocks.len() as BlockId;
-        self.blocks.insert(id, BasicBlock {
+        self.blocks.insert(
             id,
-            start,
-            end,
-            successors: Vec::new(),
-            predecessors: Vec::new(),
-        });
+            BasicBlock {
+                id,
+                start,
+                end,
+                successors: Vec::new(),
+                predecessors: Vec::new(),
+            },
+        );
         id
     }
 
@@ -65,7 +68,8 @@ impl Cfg {
 
     /// Get block ID by start address, or None.
     pub fn block_at(&self, addr: u16) -> Option<BlockId> {
-        self.blocks.iter()
+        self.blocks
+            .iter()
             .find(|(_, b)| b.start == addr)
             .map(|(id, _)| *id)
     }
@@ -110,8 +114,8 @@ impl Cfg {
 
                 match opcode {
                     // Terminators: JMP, JSR, RTS, RTI, BRK, branches
-                    0x4C | 0x6C | 0x60 | 0x40 | 0x00 |
-                    0x10 | 0x30 | 0x50 | 0x70 | 0x90 | 0xB0 | 0xD0 | 0xF0 => {
+                    0x4C | 0x6C | 0x60 | 0x40 | 0x00 | 0x10 | 0x30 | 0x50 | 0x70 | 0x90 | 0xB0
+                    | 0xD0 | 0xF0 => {
                         break;
                     }
                     // JSR — call, block continues after it

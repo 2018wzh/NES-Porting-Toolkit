@@ -22,10 +22,10 @@
 //! The engine maintains a cache of loaded sounds keyed by `SfxId`/`BgmId`.
 //! Asset paths are resolved relative to the configured assets directory.
 
-use crate::kira_events::{NativeAudioEvent, SfxId, BgmId};
+use crate::kira_events::{BgmId, NativeAudioEvent, SfxId};
 use kira::{
     manager::{AudioManager, AudioManagerSettings},
-    sound::static_sound::{StaticSoundData, StaticSoundSettings, StaticSoundHandle},
+    sound::static_sound::{StaticSoundData, StaticSoundHandle, StaticSoundSettings},
     track::{TrackBuilder, TrackHandle},
     tween::Tween,
 };
@@ -145,7 +145,11 @@ impl KiraEngine {
             }
         }
 
-        tracing::warn!("SFX {:?} not found at {:?}", id, self.assets_path.join("sfx"));
+        tracing::warn!(
+            "SFX {:?} not found at {:?}",
+            id,
+            self.assets_path.join("sfx")
+        );
     }
 
     /// Load a BGM sound file.
@@ -177,7 +181,11 @@ impl KiraEngine {
             }
         }
 
-        tracing::warn!("BGM {:?} not found at {:?}", id, self.assets_path.join("bgm"));
+        tracing::warn!(
+            "BGM {:?} not found at {:?}",
+            id,
+            self.assets_path.join("bgm")
+        );
     }
 
     /// Dispatch a native audio event for playback.
@@ -277,7 +285,7 @@ impl Default for KiraEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kira_events::{SfxId, BgmId};
+    use crate::kira_events::{BgmId, SfxId};
 
     #[test]
     fn test_dispatch_sfx() {

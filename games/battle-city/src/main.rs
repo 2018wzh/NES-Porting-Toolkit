@@ -16,19 +16,21 @@ use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::Window;
 
-use nptk_core::bus::NesBusImpl;
-use nptk_input::nes_controller::NesControllerState;
-use nptk_core::rom::parse_rom;
-use nptk_core::system::NesSystem;
-use nptk_wgpu::debug_ui::{DebugData, DebugOverlay};
-use nptk_wgpu::renderer::{RenderMode, WgpuRenderer};
 use nptk_audio::apu_mixer::ApuMixer;
 use nptk_audio::cpal_output::CpalOutput;
+use nptk_core::bus::NesBusImpl;
+use nptk_core::rom::parse_rom;
+use nptk_core::system::NesSystem;
+use nptk_input::backend::{
+    InputBackend, InputDeviceInfo, InputEventSink, PhysicalDeviceId, RawGamepadState,
+};
 use nptk_input::backends::winit_keyboard::WinitKeyboardBackend;
-use nptk_input::backend::{InputBackend, InputEventSink, InputDeviceInfo, PhysicalDeviceId, RawGamepadState};
 use nptk_input::canonical::CanonicalGamepadState;
+use nptk_input::nes_controller::NesControllerState;
 use nptk_input::nes_controller::canonical_to_nes_port;
-use nptk_native_runtime::runtime::{RecompiledRuntime, PpuEventSink, AudioEventSink};
+use nptk_native_runtime::runtime::{AudioEventSink, PpuEventSink, RecompiledRuntime};
+use nptk_wgpu::debug_ui::{DebugData, DebugOverlay};
+use nptk_wgpu::renderer::{RenderMode, WgpuRenderer};
 
 // ── Execution mode ───────────────────────────────────────────────────────
 
@@ -74,7 +76,9 @@ impl BattleCityApp {
 
         let (recompiled, exec_mode) = if use_recompiled {
             // Create a RecompiledRuntime from the system's bus
-            let rom_path = std::env::args().nth(1).unwrap_or_else(|| "roms/BattleCity (Japan).nes".into());
+            let rom_path = std::env::args()
+                .nth(1)
+                .unwrap_or_else(|| "roms/BattleCity (Japan).nes".into());
             let data = std::fs::read(&rom_path).ok();
             let recompiled = data.and_then(|d| {
                 let rom = parse_rom(&d).ok()?;
@@ -103,7 +107,10 @@ impl BattleCityApp {
                 for (addr, func) in dispatch {
                     rt.add_cabi_block(addr, func);
                 }
-                tracing::info!("Registered {} AOT blocks (statically linked)", rt.cabi_dispatch.len());
+                tracing::info!(
+                    "Registered {} AOT blocks (statically linked)",
+                    rt.cabi_dispatch.len()
+                );
                 Some(rt)
             });
             (recompiled, ExecMode::Recompiled)
@@ -139,25 +146,47 @@ impl BattleCityApp {
         canonical: &mut CanonicalGamepadState,
         now_ns: u64,
     ) {
-        struct GamepadMergeSink { out: &'static mut CanonicalGamepadState }
+        struct GamepadMergeSink {
+            out: &'static mut CanonicalGamepadState,
+        }
         impl InputEventSink for GamepadMergeSink {
             fn on_raw_gamepad(&mut self, state: RawGamepadState) {
                 let b = |i| state.buttons.get(i).copied().unwrap_or(false);
-                if b(0) { self.out.south = true; }
-                if b(1) { self.out.east = true; }
-                if b(11) { self.out.dpad_up = true; }
-                if b(12) { self.out.dpad_down = true; }
-                if b(13) { self.out.dpad_left = true; }
-                if b(14) { self.out.dpad_right = true; }
-                if b(7) { self.out.start = true; }
-                if b(6) { self.out.select = true; }
+                if b(0) {
+                    self.out.south = true;
+                }
+                if b(1) {
+                    self.out.east = true;
+                }
+                if b(11) {
+                    self.out.dpad_up = true;
+                }
+                if b(12) {
+                    self.out.dpad_down = true;
+                }
+                if b(13) {
+                    self.out.dpad_left = true;
+                }
+                if b(14) {
+                    self.out.dpad_right = true;
+                }
+                if b(7) {
+                    self.out.start = true;
+                }
+                if b(6) {
+                    self.out.select = true;
+                }
             }
             fn on_device_connected(&mut self, _info: InputDeviceInfo) {}
             fn on_device_disconnected(&mut self, _id: PhysicalDeviceId) {}
         }
         // SAFETY: GamepadMergeSink is only used within poll() and canonical lives
         // for the duration of this call.
-        let mut sink = unsafe { GamepadMergeSink { out: &mut *(&mut *canonical as *mut _) } };
+        let mut sink = unsafe {
+            GamepadMergeSink {
+                out: &mut *(&mut *canonical as *mut _),
+            }
+        };
         backend.poll(now_ns, &mut sink);
     }
 }
@@ -271,11 +300,19 @@ impl ApplicationHandler for BattleCityApp {
                     KeyCode::KeyZ => self.keyboard_backend.handle_key_event("z", pressed),
                     KeyCode::KeyX => self.keyboard_backend.handle_key_event("x", pressed),
                     KeyCode::Enter => self.keyboard_backend.handle_key_event("Enter", pressed),
-                    KeyCode::ShiftRight => self.keyboard_backend.handle_key_event("RShift", pressed),
+                    KeyCode::ShiftRight => {
+                        self.keyboard_backend.handle_key_event("RShift", pressed)
+                    }
                     KeyCode::ArrowUp => self.keyboard_backend.handle_key_event("ArrowUp", pressed),
-                    KeyCode::ArrowDown => self.keyboard_backend.handle_key_event("ArrowDown", pressed),
-                    KeyCode::ArrowLeft => self.keyboard_backend.handle_key_event("ArrowLeft", pressed),
-                    KeyCode::ArrowRight => self.keyboard_backend.handle_key_event("ArrowRight", pressed),
+                    KeyCode::ArrowDown => {
+                        self.keyboard_backend.handle_key_event("ArrowDown", pressed)
+                    }
+                    KeyCode::ArrowLeft => {
+                        self.keyboard_backend.handle_key_event("ArrowLeft", pressed)
+                    }
+                    KeyCode::ArrowRight => self
+                        .keyboard_backend
+                        .handle_key_event("ArrowRight", pressed),
                     _ => {}
                 }
             }
@@ -325,7 +362,8 @@ impl BattleCityApp {
         if !self.paused {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default().as_nanos() as u64;
+                .unwrap_or_default()
+                .as_nanos() as u64;
 
             // Start with keyboard state
             let mut canonical = self.keyboard_backend.state().clone();
@@ -350,9 +388,7 @@ impl BattleCityApp {
                         *self.system.run_frame()
                     }
                 }
-                ExecMode::Interpreter => {
-                    *self.system.run_frame()
-                }
+                ExecMode::Interpreter => *self.system.run_frame(),
             };
 
             // Feed audio samples
@@ -363,10 +399,8 @@ impl BattleCityApp {
                 let p2 = apu.pulse2_output();
                 let tri = apu.triangle_output();
                 let noise = apu.noise_output();
-                self.apu_mixer.mix(
-                    nptk_core::system::CPU_CYCLES_PER_FRAME,
-                    p1, p2, tri, noise,
-                );
+                self.apu_mixer
+                    .mix(nptk_core::system::CPU_CYCLES_PER_FRAME, p1, p2, tri, noise);
                 let samples = self.apu_mixer.drain_samples();
                 for s in samples {
                     // Send sample to audio thread (blocks only if buffer is full)
@@ -398,14 +432,7 @@ impl BattleCityApp {
                     let oam = ppu.oam_data();
                     let ppu_ctrl = ppu.ctrl;
 
-                    renderer.upload_native_data(
-                        &chr_data,
-                        nametable,
-                        attr,
-                        palette,
-                        oam,
-                        ppu_ctrl,
-                    );
+                    renderer.upload_native_data(&chr_data, nametable, attr, palette, oam, ppu_ctrl);
                 }
             }
 
@@ -418,7 +445,9 @@ impl BattleCityApp {
                 let mut hash: u64 = 0;
                 for (i, &b) in fb.iter().enumerate() {
                     hash = hash.wrapping_mul(31).wrapping_add(b as u64);
-                    if i % 101 == 0 { hash = hash.rotate_left(7); }
+                    if i % 101 == 0 {
+                        hash = hash.rotate_left(7);
+                    }
                 }
 
                 self.debug_overlay.update_nes_state(DebugData {
@@ -473,10 +502,8 @@ impl BattleCityApp {
         let _ = egui_state.handle_platform_output(window, egui_full_output.platform_output);
 
         // Prepare egui primitives
-        let egui_primitives = egui_ctx.tessellate(
-            egui_full_output.shapes,
-            egui_ctx.pixels_per_point(),
-        );
+        let egui_primitives =
+            egui_ctx.tessellate(egui_full_output.shapes, egui_ctx.pixels_per_point());
 
         // Update egui textures and buffers
         let egui_renderer = self.egui_renderer.as_mut().unwrap();
@@ -491,13 +518,17 @@ impl BattleCityApp {
         };
 
         // Single combined render pass: NES content + egui overlay
-        let output = renderer.surface.get_current_texture()
+        let output = renderer
+            .surface
+            .get_current_texture()
             .expect("Failed to get surface texture");
-        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = renderer.device.create_command_encoder(
-            &wgpu::CommandEncoderDescriptor::default(),
-        );
+        let mut encoder = renderer
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 
         egui_renderer.update_buffers(
             &renderer.device,
@@ -560,7 +591,8 @@ impl BattleCityApp {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     let use_recompiled = args.iter().any(|a| a == "--recompiled" || a == "-r");
-    let rom_path = args.iter()
+    let rom_path = args
+        .iter()
         .find(|a| !a.starts_with('-'))
         .map(|s| s.clone())
         .unwrap_or_else(|| "roms/BattleCity (Japan).nes".into());
@@ -594,7 +626,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!("  Controls: Z/X=AB, Arrows=DPad, Enter=Start, RShift=Select");
     println!("  F1=Render mode, F2=Debug UI, F3=Exec mode, Space=Pause, Esc=Exit");
-    println!("  Mode: {}", if use_recompiled { "Recompiled" } else { "Interpreter" });
+    println!(
+        "  Mode: {}",
+        if use_recompiled {
+            "Recompiled"
+        } else {
+            "Interpreter"
+        }
+    );
 
     let bus = NesBusImpl::new(cartridge);
     let system = NesSystem::new(bus);

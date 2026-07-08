@@ -1,7 +1,7 @@
 //! 状态桥接 — 游戏状态语义化 + 存档
 //! 将 NES RAM 中的状态映射为可读的 GameState 字段
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// 存档数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -10,7 +10,9 @@ pub struct SaveState {
     pub ram: Vec<u8>,
     pub pc: u16,
     pub sp: u8,
-    pub a: u8, pub x: u8, pub y: u8,
+    pub a: u8,
+    pub x: u8,
+    pub y: u8,
     pub status: u8,
     pub ppu_ctrl: u8,
     pub ppu_mask: u8,
@@ -22,10 +24,14 @@ impl SaveState {
         SaveState {
             version: 1,
             ram: vec![0u8; 0x800],
-            pc: 0, sp: 0xFD,
-            a: 0, x: 0, y: 0,
+            pc: 0,
+            sp: 0xFD,
+            a: 0,
+            x: 0,
+            y: 0,
             status: 0x24,
-            ppu_ctrl: 0, ppu_mask: 0,
+            ppu_ctrl: 0,
+            ppu_mask: 0,
             frame_count: 0,
         }
     }
@@ -37,7 +43,9 @@ impl SaveState {
             ram: system.ram().to_vec(),
             pc: system.cpu.pc,
             sp: system.cpu.sp,
-            a: system.cpu.a, x: system.cpu.x, y: system.cpu.y,
+            a: system.cpu.a,
+            x: system.cpu.x,
+            y: system.cpu.y,
             status: system.cpu.status.to_byte(),
             ppu_ctrl: system.bus.ppu.ctrl,
             ppu_mask: system.bus.ppu.mask,
@@ -76,7 +84,9 @@ impl SaveState {
 }
 
 impl Default for SaveState {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]

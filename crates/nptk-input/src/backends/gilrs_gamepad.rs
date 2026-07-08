@@ -6,8 +6,7 @@
 use std::collections::HashMap;
 
 use crate::backend::{
-    InputBackend, InputBackendKind, InputDeviceInfo, PhysicalDeviceId,
-    RawGamepadState,
+    InputBackend, InputBackendKind, InputDeviceInfo, PhysicalDeviceId, RawGamepadState,
 };
 use crate::canonical::CanonicalGamepadState;
 use crate::mapper::MappingProfile;
@@ -59,9 +58,8 @@ impl GilrsBackend {
 
         let btn = |b: Button| -> bool { gamepad.is_pressed(b) };
 
-        let axis = |a: gilrs::Axis| -> f32 {
-            gamepad.axis_data(a).map(|d| d.value()).unwrap_or(0.0)
-        };
+        let axis =
+            |a: gilrs::Axis| -> f32 { gamepad.axis_data(a).map(|d| d.value()).unwrap_or(0.0) };
 
         CanonicalGamepadState {
             south: btn(Button::South),
@@ -71,8 +69,16 @@ impl GilrsBackend {
             left_shoulder: btn(Button::LeftTrigger),
             right_shoulder: btn(Button::RightTrigger),
             // Triggers as analog axes (gilrs exposes these as buttons too)
-            left_trigger: if btn(Button::LeftTrigger2) { 1.0 } else { axis(gilrs::Axis::LeftZ) },
-            right_trigger: if btn(Button::RightTrigger2) { 1.0 } else { axis(gilrs::Axis::RightZ) },
+            left_trigger: if btn(Button::LeftTrigger2) {
+                1.0
+            } else {
+                axis(gilrs::Axis::LeftZ)
+            },
+            right_trigger: if btn(Button::RightTrigger2) {
+                1.0
+            } else {
+                axis(gilrs::Axis::RightZ)
+            },
             select: btn(Button::Select),
             start: btn(Button::Start),
             guide: btn(Button::Mode),
@@ -83,7 +89,10 @@ impl GilrsBackend {
             dpad_left: btn(Button::DPadLeft),
             dpad_right: btn(Button::DPadRight),
             left_stick: [axis(gilrs::Axis::LeftStickX), axis(gilrs::Axis::LeftStickY)],
-            right_stick: [axis(gilrs::Axis::RightStickX), axis(gilrs::Axis::RightStickY)],
+            right_stick: [
+                axis(gilrs::Axis::RightStickX),
+                axis(gilrs::Axis::RightStickY),
+            ],
         }
     }
 
@@ -139,7 +148,8 @@ impl GilrsBackend {
                     },
                 );
                 // Prepopulate last state with defaults
-                self.last_states.insert(gid, CanonicalGamepadState::default());
+                self.last_states
+                    .insert(gid, CanonicalGamepadState::default());
             }
         }
     }
@@ -194,11 +204,7 @@ impl InputBackend for GilrsBackend {
             .gamepads()
             .filter(|(_id, gp)| gp.is_connected())
             .map(|(gid, gp)| {
-                let local_id = self
-                    .device_map
-                    .get(&gid)
-                    .map(|d| d.local_id)
-                    .unwrap_or(0);
+                let local_id = self.device_map.get(&gid).map(|d| d.local_id).unwrap_or(0);
                 InputDeviceInfo {
                     device_id: PhysicalDeviceId {
                         backend: InputBackendKind::Gilrs,
@@ -213,12 +219,7 @@ impl InputBackend for GilrsBackend {
             .collect()
     }
 
-    fn set_rumble(
-        &mut self,
-        device: PhysicalDeviceId,
-        low: f32,
-        high: f32,
-    ) -> Result<(), ()> {
+    fn set_rumble(&mut self, device: PhysicalDeviceId, low: f32, high: f32) -> Result<(), ()> {
         // gilrs 0.11: rumble is set through Gamepad::set_ff_state or similar.
         // For now this is a stub — most NES games don't use rumble anyway.
         let _ = (device, low, high);

@@ -25,8 +25,7 @@ pub use nptk_core::mapper::*;
 /// 便捷 prelude 模块
 pub mod prelude {
     pub use nptk_core::mapper::{
-        AddressMapper, Cartridge, CartridgeEventSink, MapperChip,
-        MapperContext,
+        AddressMapper, Cartridge, CartridgeEventSink, MapperChip, MapperContext,
     };
 }
 

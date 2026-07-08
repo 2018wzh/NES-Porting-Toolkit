@@ -6,7 +6,14 @@ pub type Label = u16;
 /// 转发条件
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BranchCondition {
-    Eq, Ne, Cs, Cc, Mi, Pl, Vs, Vc,
+    Eq,
+    Ne,
+    Cs,
+    Cc,
+    Mi,
+    Pl,
+    Vs,
+    Vc,
 }
 
 /// 寻址操作数
@@ -44,12 +51,18 @@ pub enum IrOp {
     Dec(u16),
     ShiftLeft(u16),
     ShiftRight(u16),
-    Branch { condition: BranchCondition, target: Label },
+    Branch {
+        condition: BranchCondition,
+        target: Label,
+    },
     Jump(Label),
     JumpIndirect(u16),
     Call(Label),
     Return,
-    SetFlag { flag: u8, value: bool },
+    SetFlag {
+        flag: u8,
+        value: bool,
+    },
     AdvanceCycles(u8),
 }
 

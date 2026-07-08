@@ -20,7 +20,13 @@ impl NesSystem {
     pub fn new(mut bus: NesBusImpl) -> Self {
         let mut cpu = crate::cpu_ref::Cpu6502::new();
         cpu.reset(&mut bus);
-        NesSystem { bus, cpu, frame_count: 0, cpu_cycle: 0, ppu_dot: 0 }
+        NesSystem {
+            bus,
+            cpu,
+            frame_count: 0,
+            cpu_cycle: 0,
+            ppu_dot: 0,
+        }
     }
 
     /// 从 Cartridge 创建 NesSystem（便捷构造函数）
@@ -68,15 +74,16 @@ impl NesSystem {
         c
     }
 
-    pub fn ram(&self) -> &[u8; 0x800] { &self.bus.ram }
+    pub fn ram(&self) -> &[u8; 0x800] {
+        &self.bus.ram
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::mapper::{
-        Cartridge, CartridgeMetadata, ChrStorage, MapperChip, MapperContext,
-        MapperSaveState,
+        Cartridge, CartridgeMetadata, ChrStorage, MapperChip, MapperContext, MapperSaveState,
     };
     use crate::rom::parse_rom;
     use std::cell::RefCell;
@@ -87,45 +94,69 @@ mod tests {
         mirroring: crate::rom::Mirroring,
     }
     impl MapperChip for TestMapper {
-        fn mapper_id(&self) -> u16 { 0 }
-        fn name(&self) -> &'static str { "Test" }
+        fn mapper_id(&self) -> u16 {
+            0
+        }
+        fn name(&self) -> &'static str {
+            "Test"
+        }
         fn cpu_read(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8> {
             match addr {
                 0x8000..=0xFFFF => {
                     let ctx = ctx.borrow();
                     let prg = &ctx.prg_rom;
-                    if prg.is_empty() { return Some(0); }
+                    if prg.is_empty() {
+                        return Some(0);
+                    }
                     Some(prg[(addr as usize - 0x8000) % prg.len()])
                 }
                 _ => None,
             }
         }
-        fn cpu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool { false }
-        fn ppu_read(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16) -> Option<u8> { None }
-        fn ppu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool { false }
-        fn mirroring(&self) -> crate::rom::Mirroring { self.mirroring }
-        fn save_state(&self) -> MapperSaveState { MapperSaveState::new(0) }
+        fn cpu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool {
+            false
+        }
+        fn ppu_read(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16) -> Option<u8> {
+            None
+        }
+        fn ppu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool {
+            false
+        }
+        fn mirroring(&self) -> crate::rom::Mirroring {
+            self.mirroring
+        }
+        fn save_state(&self) -> MapperSaveState {
+            MapperSaveState::new(0)
+        }
         fn load_state(&mut self, _state: &MapperSaveState) {}
     }
 
     fn make_test_system() -> NesSystem {
         let mut data = vec![0u8; 16 + 16384 + 8192];
         data[0..4].copy_from_slice(b"NES\x1a");
-        data[4] = 1; data[5] = 1;
+        data[4] = 1;
+        data[5] = 1;
         let prg = 0x10;
         // LDA #$01, STA $51, JMP $8000
-        data[prg..prg+7].copy_from_slice(&[0xA9, 0x01, 0x85, 0x51, 0x4C, 0x00, 0x80]);
-        data[prg + 0x3FFC] = 0x00; data[prg + 0x3FFD] = 0x80;
+        data[prg..prg + 7].copy_from_slice(&[0xA9, 0x01, 0x85, 0x51, 0x4C, 0x00, 0x80]);
+        data[prg + 0x3FFC] = 0x00;
+        data[prg + 0x3FFD] = 0x80;
         let rom = parse_rom(&data).unwrap();
         let cartridge = Cartridge::new_simple(
             CartridgeMetadata {
-                mapper_id: 0, submapper_id: 0,
-                prg_rom_size: 1, chr_rom_size: 1,
-                has_sram: false, has_trainer: false, battery_backed: false,
+                mapper_id: 0,
+                submapper_id: 0,
+                prg_rom_size: 1,
+                chr_rom_size: 1,
+                has_sram: false,
+                has_trainer: false,
+                battery_backed: false,
             },
             rom.prg_rom.clone(),
             ChrStorage::Rom(rom.chr_rom.clone().unwrap_or_default()),
-            Box::new(TestMapper { mirroring: rom.header.mirroring }),
+            Box::new(TestMapper {
+                mirroring: rom.header.mirroring,
+            }),
         );
         NesSystem::from_cartridge(cartridge)
     }
@@ -140,7 +171,9 @@ mod tests {
     #[test]
     fn test_cpu_writes_ram() {
         let mut sys = make_test_system();
-        for _ in 0..5 { sys.step_cpu(); }
+        for _ in 0..5 {
+            sys.step_cpu();
+        }
         assert_eq!(sys.ram()[0x0051], 1);
     }
 

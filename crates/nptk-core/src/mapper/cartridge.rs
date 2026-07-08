@@ -9,9 +9,7 @@ use std::rc::Rc;
 use super::context::MapperContext;
 use super::event_sink::{CartridgeEventSink, NullEventSink};
 use super::mapper_chip::MapperChip;
-use super::types::{
-    ChrStorage, IrqState, PpuBusEvent,
-};
+use super::types::{ChrStorage, IrqState, PpuBusEvent};
 use crate::rom::Mirroring;
 
 /// 卡带元数据

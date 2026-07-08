@@ -8,9 +8,7 @@ use std::rc::Rc;
 
 use super::audio::ExpansionAudio;
 use super::context::MapperContext;
-use super::types::{
-    IrqState, MapperDebugInfo, MapperSaveState, PpuBusEvent,
-};
+use super::types::{IrqState, MapperDebugInfo, MapperSaveState, PpuBusEvent};
 use crate::rom::Mirroring;
 
 /// Mapper 芯片接口
@@ -40,39 +38,21 @@ pub trait MapperChip {
     ///
     /// 返回 `Some(value)` 表示此地址由 Mapper 处理，
     /// 返回 `None` 表示未映射（由 Bus 处理 open bus）。
-    fn cpu_read(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-    ) -> Option<u8>;
+    fn cpu_read(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8>;
 
     /// CPU 写入卡带地址空间
     ///
     /// 返回 `true` 表示写入已被处理，
     /// 返回 `false` 表示未映射（写入被忽略）。
-    fn cpu_write(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-        value: u8,
-    ) -> bool;
+    fn cpu_write(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16, value: u8) -> bool;
 
     // ── PPU 总线 ──
 
     /// PPU 读取卡带地址空间（图案表 $0000-$1FFF）
-    fn ppu_read(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-    ) -> Option<u8>;
+    fn ppu_read(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8>;
 
     /// PPU 写入卡带地址空间（图案表 $0000-$1FFF）
-    fn ppu_write(
-        &mut self,
-        ctx: &Rc<RefCell<MapperContext>>,
-        addr: u16,
-        value: u8,
-    ) -> bool;
+    fn ppu_write(&mut self, ctx: &Rc<RefCell<MapperContext>>, addr: u16, value: u8) -> bool;
 
     // ── 时钟推进 ──
 
@@ -80,12 +60,7 @@ pub trait MapperChip {
     fn cpu_tick(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _cycles: u32) {}
 
     /// PPU 时钟推进（用于 MMC3 等需要观察 PPU 地址线的 Mapper）
-    fn ppu_tick(
-        &mut self,
-        _ctx: &Rc<RefCell<MapperContext>>,
-        _event: PpuBusEvent,
-    ) {
-    }
+    fn ppu_tick(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _event: PpuBusEvent) {}
 
     // ── IRQ ──
 
