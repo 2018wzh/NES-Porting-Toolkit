@@ -1,4 +1,4 @@
-//! Integration tests for nes-core — end-to-end CPU + PPU + Bus scenarios.
+//! Integration tests for nptk-core — end-to-end CPU + PPU + Bus scenarios.
 
 use nptk_core::bus::{NesBus, NesBusImpl};
 use nptk_core::rom::parse_rom;

@@ -1,4 +1,4 @@
-//! nes-input: 可插拔输入系统
+//! nptk-input: 可插拔输入系统
 //! 跨平台输入后端：键盘、gamepad (gilrs)、通用 HID
 
 pub mod backend;

@@ -1,4 +1,4 @@
-//! nes-wgpu: WGPU 渲染器
+//! nptk-wgpu: WGPU 渲染器
 //! 支持兼容模式 framebuffer 上传和原生 tilemap/sprite 渲染
 
 pub mod debug_ui;

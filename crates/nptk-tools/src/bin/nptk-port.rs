@@ -1,4 +1,4 @@
-//! nes-port — NES Porting Toolkit 主 CLI
+//! nptk-port — NES Porting Toolkit 主 CLI
 //!
 //! 子命令:
 //!   inspect     — 检查 ROM 信息和 GameProfile
@@ -13,7 +13,7 @@ use clap::{Parser, Subcommand};
 use nptk_core::bus::NesBus;
 
 #[derive(Parser)]
-#[command(name = "nes-port", about = "NES Porting Toolkit")]
+#[command(name = "nptk-port", about = "NES Porting Toolkit")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

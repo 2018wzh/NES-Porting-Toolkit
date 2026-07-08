@@ -1,5 +1,5 @@
 //! Battle City 原生运行时
-//! 组合 nes-core 与各个原生子系统
+//! 组合 nptk-core 与各个原生子系统
 
 use crate::game_state::BattleCityStateView;
 use nptk_core::mapper::{Cartridge, CartridgeMetadata, ChrStorage};

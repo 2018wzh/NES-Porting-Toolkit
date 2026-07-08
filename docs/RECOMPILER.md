@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `nes-recompiler` crate transforms NES 6502 machine code into native
+The `nptk-recompiler` crate transforms NES 6502 machine code into native
 executables via a multi-stage pipeline:
 
 ```
@@ -202,7 +202,7 @@ pub struct RustCodegen {
 
 ### Runtime Loading
 
-The `RecompiledRuntime` in `nes-native-runtime` supports two dispatch tables:
+The `RecompiledRuntime` in `nptk-native-runtime` supports two dispatch tables:
 - `dispatch: HashMap<u16, NativeBlockFn>` — Rust ABI blocks (from `codegen_rust`)
 - `cabi_dispatch: HashMap<u16, CAbiBlockFn>` — C ABI blocks (from `codegen_cranelift`)
 

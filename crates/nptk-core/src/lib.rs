@@ -1,4 +1,4 @@
-//! nes-core: NES 核心组件
+//! nptk-core: NES 核心组件
 //! 包含 ROM 解析、Mapper、NesBus、CPU、PPU、APU、控制器
 
 pub mod apu_compat;

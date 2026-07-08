@@ -20,7 +20,7 @@ pub struct GilrsBackend {
     /// Last-known state per device id (for change detection)
     last_states: HashMap<gilrs::GamepadId, CanonicalGamepadState>,
     /// Optional: an InputMapper profile for configuring the layout.
-    /// If `None`, a sensible default NES-friendly mapping is used.
+    /// If `None`, a sensible default nptk-friendly mapping is used.
     mapping_profile: Option<MappingProfile>,
 }
 

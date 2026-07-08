@@ -1,4 +1,4 @@
-//! Integration tests for nes-input — replay roundtrip and mapping.
+//! Integration tests for nptk-input — replay roundtrip and mapping.
 
 use nptk_input::backend::{InputBackendKind, InputDeviceInfo, PhysicalDeviceId};
 use nptk_input::canonical::CanonicalGamepadState;

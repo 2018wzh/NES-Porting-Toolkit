@@ -72,7 +72,7 @@ pub fn keyboard_to_canonical(key_name: &str, pressed: bool, state: &mut Canonica
         "Tab" => state.guide = v,
         "LControl" => state.left_stick_button = v,
         "RControl" => state.right_stick_button = v,
-        // Face buttons W / N (NES-style alternate mapping)
+        // Face buttons W / N (nptk-style alternate mapping)
         "n" | "N" => state.west = v,
         "m" | "M" => state.north = v,
         _ => {}

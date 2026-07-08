@@ -16,7 +16,7 @@ NES_AOT=0 cargo build          # 跳过 Cranelift AOT 编译，加快迭代
 
 运行 Battle City:
 ```sh
-cargo run --release --bin nes-port -- run --rom roms/BattleCity.nes --profile profiles/battle_city/profile.toml --mode compat-interpreter
+cargo run --release --bin nptk-port -- run --rom roms/BattleCity.nes --profile profiles/battle_city/profile.toml --mode compat-interpreter
 ```
 
 ## 架构概览

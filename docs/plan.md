@@ -52,32 +52,32 @@ Windows / Linux / macOS / WebAssembly / 其他 wgpu 支持平台
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                         nes-core                                  │
+│                         nptk-core                                  │
 │  ROM Parser │ Mapper │ NesBus │ CPU Ref │ PPU Compat │ APU Compat │
 └─────────────┬───────────────────────────────────────────────────┘
               │
               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                       nes-profile                                 │
+│                       nptk-profile                                 │
 │   GameProfile │ Symbols │ RAM Map │ Hooks │ Test Config           │
 └─────────────┬───────────────────────────────────────────────────┘
               │
               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                     nes-recompiler                                │
+│                     nptk-recompiler                                │
 │   Disasm │ CFG │ IR6502 │ Analysis │ Rust Codegen │ Manifest      │
 └─────────────┬───────────────────────────────────────────────────┘
               │
               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  nes-native-runtime                               │
+│                  nptk-native-runtime                               │
 │   NesRuntime ABI │ PPU Events │ Audio Events │ Input Bridge       │
 └─────────────┬───────────────────────────────────────────────────┘
               │
        ┌──────┼────────────┬─────────────┐
        ▼      ▼            ▼             ▼
 ┌──────────┐ ┌──────────┐ ┌───────────┐ ┌─────────────────────┐
-│ nes-wgpu  │ │ nes-audio │ │ nes-input  │ │ nes-battle-city       │
+│ nptk-wgpu  │ │ nptk-audio │ │ nptk-input  │ │ nptk-battle-city       │
 │ Renderer │ │ CPAL/Kira│ │ Backends  │ │ Default Game Profile │
 └──────────┘ └──────────┘ └───────────┘ └─────────────────────┘
 ```
@@ -204,7 +204,7 @@ PresentPass            # 最终输出
 
 | 领域 | 推荐库 | 说明 |
 |---|---|---|
-| CLI | `clap` | `nes-port inspect/run/trace/recompile/dump-chr/golden` |
+| CLI | `clap` | `nptk-port inspect/run/trace/recompile/dump-chr/golden` |
 | 配置 | `serde` + `toml` / `ron` | `GameProfile`、symbols、hooks、tests |
 | 日志 | `tracing` | 结构化日志、trace、调试 |
 | 图像 | `image` | CHR 导出 PNG、golden frame、debug atlas |
@@ -216,10 +216,10 @@ PresentPass            # 最终输出
 ## 4. Workspace 结构
 
 ```text
-nes-native/
+nptk-native/
 ├── Cargo.toml
 ├── crates/
-│   ├── nes-core/
+│   ├── nptk-core/
 │   │   ├── src/
 │   │   │   ├── rom/
 │   │   │   ├── mapper/
@@ -231,7 +231,7 @@ nes-native/
 │   │   │   └── runtime.rs
 │   │   └── Cargo.toml
 │   │
-│   ├── nes-profile/
+│   ├── nptk-profile/
 │   │   ├── src/
 │   │   │   ├── profile.rs
 │   │   │   ├── symbols.rs
@@ -239,7 +239,7 @@ nes-native/
 │   │   │   └── validation.rs
 │   │   └── Cargo.toml
 │   │
-│   ├── nes-recompiler/
+│   ├── nptk-recompiler/
 │   │   ├── src/
 │   │   │   ├── disasm.rs
 │   │   │   ├── cfg.rs
@@ -249,7 +249,7 @@ nes-native/
 │   │   │   └── manifest.rs
 │   │   └── Cargo.toml
 │   │
-│   ├── nes-native-runtime/
+│   ├── nptk-native-runtime/
 │   │   ├── src/
 │   │   │   ├── nes_runtime.rs
 │   │   │   ├── ppu_bridge.rs
@@ -259,7 +259,7 @@ nes-native/
 │   │   │   └── save_state.rs
 │   │   └── Cargo.toml
 │   │
-│   ├── nes-wgpu/
+│   ├── nptk-wgpu/
 │   │   ├── src/
 │   │   │   ├── app.rs
 │   │   │   ├── renderer.rs
@@ -270,7 +270,7 @@ nes-native/
 │   │   │   └── shaders/
 │   │   └── Cargo.toml
 │   │
-│   ├── nes-audio/
+│   ├── nptk-audio/
 │   │   ├── src/
 │   │   │   ├── cpal_output.rs
 │   │   │   ├── apu_mixer.rs
@@ -278,7 +278,7 @@ nes-native/
 │   │   │   └── audio_policy.rs
 │   │   └── Cargo.toml
 │   │
-│   ├── nes-input/
+│   ├── nptk-input/
 │   │   ├── src/
 │   │   │   ├── lib.rs
 │   │   │   ├── backend.rs
@@ -299,17 +299,17 @@ nes-native/
 │   │   │   └── tests/
 │   │   └── Cargo.toml
 │   │
-│   ├── nes-tools/
+│   ├── nptk-tools/
 │   │   ├── src/bin/
-│   │   │   ├── nes-port.rs
-│   │   │   ├── nes-dump-chr.rs
-│   │   │   ├── nes-trace.rs
-│   │   │   ├── nes-build-profile.rs
-│   │   │   ├── nes-recompile.rs
-│   │   │   └── nes-input-test.rs
+│   │   │   ├── nptk-port.rs
+│   │   │   ├── nptk-dump-chr.rs
+│   │   │   ├── nptk-trace.rs
+│   │   │   ├── nptk-build-profile.rs
+│   │   │   ├── nptk-recompile.rs
+│   │   │   └── nptk-input-test.rs
 │   │   └── Cargo.toml
 │   │
-│   └── nes-battle-city/
+│   └── nptk-battle-city/
 │       ├── src/
 │       │   ├── lib.rs
 │       │   ├── native_hooks.rs
@@ -1331,13 +1331,13 @@ impl ReplayBackend {
 新增 CLI：
 
 ```bash
-nes-input-test --backend auto
-nes-input-test --backend gilrs
-nes-input-test --backend xinput
-nes-input-test --backend rawinput
-nes-input-test --backend gameinput
-nes-input-test --record input.ron
-nes-input-test --mapping-wizard profiles/battle_city/input.ron
+nptk-input-test --backend auto
+nptk-input-test --backend gilrs
+nptk-input-test --backend xinput
+nptk-input-test --backend rawinput
+nptk-input-test --backend gameinput
+nptk-input-test --record input.ron
+nptk-input-test --mapping-wizard profiles/battle_city/input.ron
 ```
 
 Debug UI：
@@ -1374,8 +1374,8 @@ Device duplicate detection
 CLI：
 
 ```bash
-nes-port inspect --profile profiles/battle_city/profile.toml --rom ./BattleCity.nes
-nes-dump-chr --rom ./BattleCity.nes --out ./target/battle_city/chr.png
+nptk-port inspect --profile profiles/battle_city/profile.toml --rom ./BattleCity.nes
+nptk-dump-chr --rom ./BattleCity.nes --out ./target/battle_city/chr.png
 ```
 
 ### 阶段 B：兼容运行
@@ -1495,22 +1495,22 @@ pub struct BattleCityStateView<'a> {
 主命令：
 
 ```bash
-nes-port inspect --rom game.nes --profile profiles/battle_city/profile.toml
-nes-port run --rom game.nes --profile profiles/battle_city/profile.toml --mode compat-interpreter
-nes-port run --rom game.nes --profile profiles/battle_city/profile.toml --mode recompiled-compat
-nes-port run --rom game.nes --profile profiles/battle_city/profile.toml --mode native-port
+nptk-port inspect --rom game.nes --profile profiles/battle_city/profile.toml
+nptk-port run --rom game.nes --profile profiles/battle_city/profile.toml --mode compat-interpreter
+nptk-port run --rom game.nes --profile profiles/battle_city/profile.toml --mode recompiled-compat
+nptk-port run --rom game.nes --profile profiles/battle_city/profile.toml --mode native-port
 
-nes-port trace --rom game.nes --profile profiles/battle_city/profile.toml --input replay.ron
-nes-port recompile --rom game.nes --profile profiles/battle_city/profile.toml --out generated/battle_city
-nes-port dump-chr --rom game.nes --out target/chr.png
-nes-port golden --rom game.nes --profile profiles/battle_city/profile.toml --input replay.ron
+nptk-port trace --rom game.nes --profile profiles/battle_city/profile.toml --input replay.ron
+nptk-port recompile --rom game.nes --profile profiles/battle_city/profile.toml --out generated/battle_city
+nptk-port dump-chr --rom game.nes --out target/chr.png
+nptk-port golden --rom game.nes --profile profiles/battle_city/profile.toml --input replay.ron
 
-nes-input-test --backend auto
-nes-input-test --backend gilrs
-nes-input-test --backend xinput
-nes-input-test --backend rawinput
-nes-input-test --record replay.ron
-nes-input-test --mapping-wizard profiles/battle_city/input.ron
+nptk-input-test --backend auto
+nptk-input-test --backend gilrs
+nptk-input-test --backend xinput
+nptk-input-test --backend rawinput
+nptk-input-test --record replay.ron
+nptk-input-test --mapping-wizard profiles/battle_city/input.ron
 ```
 
 ---
@@ -1611,7 +1611,7 @@ tracing 日志
 profile loader
 ROM loader
 wgpu window skeleton
-nes-input crate skeleton
+nptk-input crate skeleton
 CI 基础测试
 ```
 
@@ -1637,7 +1637,7 @@ winit keyboard backend
 gilrs backend
 NES port mapping
 Input replay
-nes-input-test
+nptk-input-test
 Battle City keyboard/gamepad 可操作标题菜单
 ```
 
@@ -1810,25 +1810,25 @@ Recompiler 文档
 ## 17. 推荐开发顺序
 
 ```text
-1. nes-core: ROM parser + Mapper0 + NesBus
-2. nes-profile: GameProfile + Battle City profile
-3. nes-input: backend trait + keyboard + NES controller shift register
-4. nes-tools: inspect / dump-chr / input-test
-5. nes-core: CPU reference interpreter
-6. nes-wgpu: framebuffer renderer
-7. nes-input: gilrs backend + mapping + replay
-8. nes-core: PPU compat 最小实现
-9. nes-input: Windows XInputBackend
-10. nes-tools: trace / golden
-11. nes-recompiler: disasm + CFG + IR6502
-12. nes-recompiler: Rust codegen
-13. nes-native-runtime: Runtime ABI
-14. nes-input: RawInput/HID fallback + duplicate filtering
-15. nes-battle-city: 默认 Profile hooks
-16. nes-wgpu: tilemap/sprite native renderer
-17. nes-audio: CPAL APU output
-18. nes-audio: Kira native SFX hooks
-19. nes-input: optional GameInput backend
+1. nptk-core: ROM parser + Mapper0 + NesBus
+2. nptk-profile: GameProfile + Battle City profile
+3. nptk-input: backend trait + keyboard + NES controller shift register
+4. nptk-tools: inspect / dump-chr / input-test
+5. nptk-core: CPU reference interpreter
+6. nptk-wgpu: framebuffer renderer
+7. nptk-input: gilrs backend + mapping + replay
+8. nptk-core: PPU compat 最小实现
+9. nptk-input: Windows XInputBackend
+10. nptk-tools: trace / golden
+11. nptk-recompiler: disasm + CFG + IR6502
+12. nptk-recompiler: Rust codegen
+13. nptk-native-runtime: Runtime ABI
+14. nptk-input: RawInput/HID fallback + duplicate filtering
+15. nptk-battle-city: 默认 Profile hooks
+16. nptk-wgpu: tilemap/sprite native renderer
+17. nptk-audio: CPAL APU output
+18. nptk-audio: Kira native SFX hooks
+19. nptk-input: optional GameInput backend
 20. docs: Profile / Runtime / Recompiler / Input Backends 文档
 ```
 

@@ -86,7 +86,7 @@ cargo license
 ## NESdev Wiki Attribution
 
 The implementation of the NES CPU, PPU, APU, mapper, and ROM parsing
-components in `nes-core` draws heavily on the technical documentation
+components in `nptk-core` draws heavily on the technical documentation
 published on the **NESdev Wiki** ([https://www.nesdev.org/](https://www.nesdev.org/)).
 
 The NESdev Wiki is an invaluable community resource that documents the NES

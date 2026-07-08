@@ -4,7 +4,7 @@
 //! - WGPU 渲染 (framebuffer 兼容 + native tilemap/sprite)
 //! - CPAL 音频输出 (APU 混音 → PCM)
 //! - egui 调试 UI (CPU/PPU/RAM 查看器 + 输入映射编辑器)
-//! - nes-input 输入系统 (winit 键盘 + gilrs 手柄)
+//! - nptk-input 输入系统 (winit 键盘 + gilrs 手柄)
 //! - 6502 解释器 + 可选重编译 native dispatch
 
 use std::sync::Arc;

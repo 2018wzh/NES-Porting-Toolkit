@@ -1,4 +1,4 @@
-//! 输入桥接 — 连接 nes-input 系统与 NES 控制器端口
+//! 输入桥接 — 连接 nptk-input 系统与 NES 控制器端口
 
 use nptk_core::controller::NesControllerState;
 

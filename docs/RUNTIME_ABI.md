@@ -8,7 +8,7 @@ MMIO operation, and timing event flows through this interface to ensure correct
 NES hardware behaviour regardless of whether the backend is a compatibility
 layer or a native implementation.
 
-This ABI is defined in `crates/nes-native-runtime/src/runtime.rs`.
+This ABI is defined in `crates/nptk-native-runtime/src/runtime.rs`.
 
 ## NesRuntime Trait
 

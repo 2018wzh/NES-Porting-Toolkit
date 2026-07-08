@@ -1,4 +1,4 @@
-//! nes-tools: configuration helpers
+//! nptk-tools: configuration helpers
 //!
 //! Utilities for loading CLI tool configurations (logging level, default
 //! paths, etc.) from TOML or JSON files.

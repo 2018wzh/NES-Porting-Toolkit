@@ -3,7 +3,7 @@
 //! 在 cargo build 时自动读取 ROM，通过 Cranelift 编译为原生目标文件 (.o)，
 //! 打包为静态库 (.a)，然后静态链接到最终二进制。
 //! Cranelift 生成的代码通过 `extern "C"` 函数 `nes_read8`/`nes_write8` 访问 NES 内存，
-//! 这些函数由 `nes-native-runtime` crate 提供。
+//! 这些函数由 `nptk-native-runtime` crate 提供。
 
 use std::path::Path;
 use std::process::Command;
@@ -186,8 +186,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 打包为静态库 (.a)
     // Cranelift 生成的 .o 引用了 nes_read8/nes_write8 外部符号，
-    // 这些符号由 nes-native-runtime crate 提供（#[no_mangle] extern "C"）。
-    // 静态链接时，链接器会从 nes-native-runtime 中解析这些符号。
+    // 这些符号由 nptk-native-runtime crate 提供（#[no_mangle] extern "C"）。
+    // 静态链接时，链接器会从 nptk-native-runtime 中解析这些符号。
     let lib_path = target_dir.join("libnes_blocks_battle_city.a");
     let ar_result = Command::new("ar")
         .args(&["crs"])

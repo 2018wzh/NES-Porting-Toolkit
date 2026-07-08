@@ -83,13 +83,13 @@ cargo test --workspace
 
 ```bash
 # 兼容模式（6502 解释器 + PPU/APU 兼容层）
-cargo run --release --bin nes-port -- run \
+cargo run --release --bin nptk-port -- run \
     --rom roms/BattleCity\ \(Japan\).nes \
     --profile profiles/battle_city/profile.toml \
     --mode compat-interpreter
 
 # 重编译模式（Cranelift AOT 原生代码 + 兼容运行时）
-cargo run --release --bin nes-port -- run \
+cargo run --release --bin nptk-port -- run \
     --rom roms/BattleCity\ \(Japan\).nes \
     --profile profiles/battle_city/profile.toml \
     --mode recompiled-compat
@@ -99,13 +99,13 @@ cargo run --release --bin nes-port -- run \
 
 | 命令 | 作用 |
 |---|---|
-| `nes-port inspect --rom <FILE>` | 检查 ROM 元数据和 GameProfile |
-| `nes-port run --rom <FILE> --profile <FILE>` | 运行游戏 |
-| `nes-port trace --rom <FILE>` | 记录 CPU 执行 trace |
-| `nes-port recompile --rom <FILE>` | 静态重编译 |
-| `nes-port dump-chr --rom <FILE>` | 导出 CHR tile atlas 为 PNG |
-| `nes-port golden --rom <FILE>` | 运行 golden frame 测试 |
-| `nes-port input-test` | 测试输入后端 |
+| `nptk-port inspect --rom <FILE>` | 检查 ROM 元数据和 GameProfile |
+| `nptk-port run --rom <FILE> --profile <FILE>` | 运行游戏 |
+| `nptk-port trace --rom <FILE>` | 记录 CPU 执行 trace |
+| `nptk-port recompile --rom <FILE>` | 静态重编译 |
+| `nptk-port dump-chr --rom <FILE>` | 导出 CHR tile atlas 为 PNG |
+| `nptk-port golden --rom <FILE>` | 运行 golden frame 测试 |
+| `nptk-port input-test` | 测试输入后端 |
 
 ### 运行 GUI 应用
 
@@ -133,7 +133,7 @@ cargo run --release --bin battle-city
 │   ├── nptk-wgpu/              # WGPU 渲染器（framebuffer + native tilemap/sprite）
 │   ├── nptk-audio/             # 音频系统（CPAL PCM + Kira 原生）
 │   ├── nptk-input/             # 可插拔输入系统（键盘、手柄、HID、replay）
-│   ├── nptk-tools/             # CLI 工具（nes-port 二进制入口）
+│   ├── nptk-tools/             # CLI 工具（nptk-port 二进制入口）
 │   └── nptk-mapper/            # Mapper 聚合 crate（重导出 + linkme 自动注册）
 ├── mappers/
 │   ├── nrom/                   # NROM (Mapper 0) 实现

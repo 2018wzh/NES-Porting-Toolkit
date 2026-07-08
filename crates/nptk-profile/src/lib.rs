@@ -1,4 +1,4 @@
-//! nes-profile: GameProfile 定义、符号表、hook 配置、ROM 验证
+//! nptk-profile: GameProfile 定义、符号表、hook 配置、ROM 验证
 
 extern crate alloc;
 

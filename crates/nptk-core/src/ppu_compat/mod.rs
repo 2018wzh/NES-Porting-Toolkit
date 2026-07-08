@@ -14,6 +14,8 @@ use crate::mapper::Cartridge;
 use crate::rom::Mirroring;
 
 /// PPU 兼容实现
+#[repr(C)]
+#[allow(unused)]
 pub struct PpuCompat {
     // 寄存器
     pub ctrl: u8,   // $2000

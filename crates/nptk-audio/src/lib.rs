@@ -1,4 +1,4 @@
-//! nes-audio: 音频系统
+//! nptk-audio: 音频系统
 //! CPAL PCM 兼容输出 + Kira 原生音频
 
 pub mod apu_mixer;

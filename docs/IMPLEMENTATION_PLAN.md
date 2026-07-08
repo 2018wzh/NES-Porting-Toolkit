@@ -18,14 +18,14 @@ the framework is designed to be game-agnostic and extensible.
 
 | Crate | Status | Description |
 |---|---|---|
-| `nes-core` | Functional | ROM parsing (iNES / NES 2.0), Mapper 0 / NROM, NesBus, 6502 CPU reference interpreter, PPU compatibility renderer, APU compatibility, NES controller shift-register emulation, NES system frame loop |
-| `nes-profile` | Functional | `GameProfile` TOML loading/serialization, `SymbolTable` (RAM symbols, function entry points, data tables), `HookConfig` (code region annotations), profile validation |
-| `nes-recompiler` | Functional | Disassembly wrapper (`disasm6502`), CFG data structures, IR6502 opcode definitions, basic code analysis, manifest generation, **Cranelift AOT codegen** (IR6502 → Cranelift IR → native .dll), deprecated Rust codegen backend |
-| `nes-native-runtime` | Functional | `NesRuntime` trait, `CompatRuntime` (NesBus-backed), `PpuBridge`, `AudioBridge`, `InputBridge`, `StateBridge` |
-| `nes-wgpu` | Functional | WGPU renderer with framebuffer and native tilemap/sprite modes, CHR texture atlas, WGSL shaders, egui debug overlay (CPU/PPU/RAM viewer, input mapping editor) |
-| `nes-audio` | Functional | CPAL output stream, APU mixer (NES DAC formula), Kira event types (SfxId/BgmId/NativeAudioEvent) |
-| `nes-input` | Functional | Backend trait, canonical gamepad state, input mapper, NES controller mapping, replay backend, hotplug manager |
-| `nes-tools` | Functional | CLI with `inspect` / `run` / `trace` / `recompile` / `dump-chr` / `golden` / `input-test` subcommands |
+| `nptk-core` | Functional | ROM parsing (iNES / NES 2.0), Mapper 0 / NROM, NesBus, 6502 CPU reference interpreter, PPU compatibility renderer, APU compatibility, NES controller shift-register emulation, NES system frame loop |
+| `nptk-profile` | Functional | `GameProfile` TOML loading/serialization, `SymbolTable` (RAM symbols, function entry points, data tables), `HookConfig` (code region annotations), profile validation |
+| `nptk-recompiler` | Functional | Disassembly wrapper (`disasm6502`), CFG data structures, IR6502 opcode definitions, basic code analysis, manifest generation, **Cranelift AOT codegen** (IR6502 → Cranelift IR → native .dll), deprecated Rust codegen backend |
+| `nptk-native-runtime` | Functional | `NesRuntime` trait, `CompatRuntime` (NesBus-backed), `PpuBridge`, `AudioBridge`, `InputBridge`, `StateBridge` |
+| `nptk-wgpu` | Functional | WGPU renderer with framebuffer and native tilemap/sprite modes, CHR texture atlas, WGSL shaders, egui debug overlay (CPU/PPU/RAM viewer, input mapping editor) |
+| `nptk-audio` | Functional | CPAL output stream, APU mixer (NES DAC formula), Kira event types (SfxId/BgmId/NativeAudioEvent) |
+| `nptk-input` | Functional | Backend trait, canonical gamepad state, input mapper, NES controller mapping, replay backend, hotplug manager |
+| `nptk-tools` | Functional | CLI with `inspect` / `run` / `trace` / `recompile` / `dump-chr` / `golden` / `input-test` subcommands |
 
 **Overall:** Phase 1-2 (core emulation, profile system, basic tooling) is functional.
 Phase 3-4 (WGPU native rendering, native audio) is in active development.
@@ -39,33 +39,33 @@ Phase 3-4 (WGPU native rendering, native audio) is in active development.
                                        |
                                        v
 +-----------------------------------------------------------------+
-|                         nes-core                                  |
+|                         nptk-core                                  |
 |  ROM Parser | Mapper | NesBus | CPU Ref | PPU Compat | APU Compat |
 +-------------+---------------------------------------------------+
               |
               v
 +-----------------------------------------------------------------+
-|                       nes-profile                                 |
+|                       nptk-profile                                 |
 |   GameProfile | Symbols | RAM Map | Hooks | Test Config           |
 +-------------+---------------------------------------------------+
               |
               v
 +-----------------------------------------------------------------+
-|                     nes-recompiler                                |
+|                     nptk-recompiler                                |
 |   Disasm | CFG | IR6502 | Analysis | Cranelift Codegen | Manifest |
 |   (deprecated: Rust Codegen)                                      |
 +-------------+---------------------------------------------------+
               |
               v
 +-----------------------------------------------------------------+
-|                  nes-native-runtime                               |
+|                  nptk-native-runtime                               |
 |   NesRuntime ABI | PPU Events | Audio Events | Input Bridge       |
 +-------------+---------------------------------------------------+
               |
        +------+------------+-------------+
        v      v            v             v
 +-----------+ +----------+ +-----------+ +---------------------+
-| nes-wgpu   | | nes-audio | | nes-input  | | nes-battle-city      |
+| nptk-wgpu   | | nptk-audio | | nptk-input  | | nptk-battle-city      |
 | Renderer  | | CPAL/Kira| | Backends  | | Default Game Profile |
 +-----------+ +----------+ +-----------+ +---------------------+
 ```
@@ -81,35 +81,35 @@ Phase 3-4 (WGPU native rendering, native audio) is in active development.
 ## Crate Dependency Graph
 
 ```
-nes-core         (foundation: ROM, Mapper, Bus, CPU, PPU, APU, Controller)
+nptk-core         (foundation: ROM, Mapper, Bus, CPU, PPU, APU, Controller)
   ^
   |
-nes-profile      (game-specific metadata, symbols, hooks)
+nptk-profile      (game-specific metadata, symbols, hooks)
   ^
   |
-nes-recompiler   (6502 static recompilation pipeline)
+nptk-recompiler   (6502 static recompilation pipeline)
   ^
   |
-nes-native-runtime (NesRuntime ABI, runtime bridges)
+nptk-native-runtime (NesRuntime ABI, runtime bridges)
   ^         ^         ^
   |         |         |
-nes-wgpu   nes-audio  nes-input    (frontend implementations)
+nptk-wgpu   nptk-audio  nptk-input    (frontend implementations)
               ^
               |
-         nes-tools                  (CLI entry point)
+         nptk-tools                  (CLI entry point)
 ```
 
 ## CLI Commands Reference
 
 | Command | Description |
 |---|---|
-| `nes-port inspect --rom <FILE> [--profile <FILE>]` | Inspect ROM metadata and GameProfile |
-| `nes-port run --rom <FILE> [--profile <FILE>] [--mode <MODE>]` | Run game in specified mode |
-| `nes-port trace --rom <FILE> [--profile <FILE>] [--input <FILE>]` | Record CPU execution trace |
-| `nes-port recompile --rom <FILE> [--profile <FILE>] [--out <DIR>]` | Static recompilation |
-| `nes-port dump-chr --rom <FILE> [--out <FILE>]` | Export CHR tile atlas as PNG |
-| `nes-port golden --rom <FILE> [--profile <FILE>] [--input <FILE>]` | Run golden frame tests |
-| `nes-port input-test [--backend <BACKEND>] [--record <FILE>] [--mapping-wizard <FILE>]` | Test input backends |
+| `nptk-port inspect --rom <FILE> [--profile <FILE>]` | Inspect ROM metadata and GameProfile |
+| `nptk-port run --rom <FILE> [--profile <FILE>] [--mode <MODE>]` | Run game in specified mode |
+| `nptk-port trace --rom <FILE> [--profile <FILE>] [--input <FILE>]` | Record CPU execution trace |
+| `nptk-port recompile --rom <FILE> [--profile <FILE>] [--out <DIR>]` | Static recompilation |
+| `nptk-port dump-chr --rom <FILE> [--out <FILE>]` | Export CHR tile atlas as PNG |
+| `nptk-port golden --rom <FILE> [--profile <FILE>] [--input <FILE>]` | Run golden frame tests |
+| `nptk-port input-test [--backend <BACKEND>] [--record <FILE>] [--mapping-wizard <FILE>]` | Test input backends |
 
 ## Build and Run
 
@@ -118,14 +118,14 @@ nes-wgpu   nes-audio  nes-input    (frontend implementations)
 cargo build --release
 
 # Run Battle City in compatibility mode
-cargo run --release --bin nes-port -- run --rom roms/battle_city.nes \
+cargo run --release --bin nptk-port -- run --rom roms/battle_city.nes \
     --profile profiles/battle_city/profile.toml --mode compat-interpreter
 
 # Dump CHR tiles
-cargo run --release --bin nes-port -- dump-chr --rom roms/battle_city.nes
+cargo run --release --bin nptk-port -- dump-chr --rom roms/battle_city.nes
 
 # Inspect a ROM
-cargo run --release --bin nes-port -- inspect --rom roms/battle_city.nes \
+cargo run --release --bin nptk-port -- inspect --rom roms/battle_city.nes \
     --profile profiles/battle_city/profile.toml
 
 # Run tests

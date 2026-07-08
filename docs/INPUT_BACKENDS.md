@@ -2,7 +2,7 @@
 
 ## Architecture
 
-The input system (`nes-input` crate) translates physical input devices
+The input system (`nptk-input` crate) translates physical input devices
 (keyboards, gamepads) into canonical gamepad state, and then
 maps that canonical state into NES controller button readings.
 
@@ -247,7 +247,7 @@ backend.reset();
 
 ## How to Add a New Backend
 
-1. **Create a new module** under `crates/nes-input/src/backends/`.
+1. **Create a new module** under `crates/nptk-input/src/backends/`.
    Name it after the API you are wrapping (e.g. `sdl_gamepad.rs`).
 
 2. **Implement `InputBackend`:**
