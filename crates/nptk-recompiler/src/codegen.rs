@@ -60,6 +60,7 @@ pub struct CraneliftAot {
     block_names: HashMap<u16, String>,
     read8_id: cranelift_module::FuncId,
     write8_id: cranelift_module::FuncId,
+    advance_id: cranelift_module::FuncId,
 }
 
 impl CraneliftAot {
@@ -100,6 +101,13 @@ impl CraneliftAot {
         let write8_id = module.declare_function("nes_write8", Linkage::Import, &write8_sig)
             .map_err(|e| format!("declare nes_write8: {}", e))?;
 
+        // Declare nes_advance_cycles(bus: *mut NesBusImpl, cycles: u32)
+        let mut advance_sig = Signature::new(CallConv::SystemV);
+        advance_sig.params.push(AbiParam::new(I64));
+        advance_sig.params.push(AbiParam::new(I32));
+        let advance_id = module.declare_function("nes_advance_cycles", Linkage::Import, &advance_sig)
+            .map_err(|e| format!("declare nes_advance_cycles: {}", e))?;
+
         Ok(CraneliftAot {
             module,
             builder_ctx: FunctionBuilderContext::new(),
@@ -108,6 +116,7 @@ impl CraneliftAot {
             block_names: HashMap::new(),
             read8_id,
             write8_id,
+            advance_id,
         })
     }
 
@@ -135,13 +144,18 @@ impl CraneliftAot {
 
         let read8_ref = self.module.declare_func_in_func(self.read8_id, &mut bcx.func);
         let write8_ref = self.module.declare_func_in_func(self.write8_id, &mut bcx.func);
+        let advance_ref = self.module.declare_func_in_func(self.advance_id, &mut bcx.func);
 
         let mut current_addr = address;
         let mut has_unconditional_return = false;
 
         for op in ir_ops {
+            // 在 terminal 指令之后跳过后续指令（它们位于 dead block 中）
+            if has_unconditional_return {
+                break;
+            }
             translate_op(
-                &mut bcx, op, bus_ptr, cpu_ptr, current_addr, read8_ref, write8_ref,
+                &mut bcx, op, bus_ptr, cpu_ptr, current_addr, read8_ref, write8_ref, advance_ref,
             )?;
             match op {
                 IrOp::Return | IrOp::Jump(_) | IrOp::JumpIndirect(_) => {
@@ -393,6 +407,7 @@ fn translate_op(
     instr_addr: u16,
     read8_ref: FuncRef,
     write8_ref: FuncRef,
+    advance_ref: FuncRef,
 ) -> Result<(), String> {
     match op {
         IrOp::Nop => Ok(()),
@@ -557,7 +572,11 @@ fn translate_op(
             translate_set_flag(bcx, cpu_ptr, bus_ptr, *flag, *value, read8_ref, write8_ref)
         }
 
-        IrOp::AdvanceCycles(_n) => Ok(()),
+        IrOp::AdvanceCycles(n) => {
+            let cycles_val = bcx.ins().iconst(I32, *n as i64);
+            bcx.ins().call(advance_ref, &[bus_ptr, cycles_val]);
+            Ok(())
+        }
     }
 }
 

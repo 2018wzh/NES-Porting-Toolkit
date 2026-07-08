@@ -1,0 +1,20 @@
+[package]
+name = "nptk-mapper"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+nptk-core = { path = "../nptk-core" }
+linkme.workspace = true
+
+# Mapper 实现 crate（可选，通过 feature 控制）
+mapper-nrom = { path = "../../mappers/nrom", optional = true }
+mapper-uxrom = { path = "../../mappers/uxrom", optional = true }
+mapper-cnrom = { path = "../../mappers/cnrom", optional = true }
+
+[features]
+default = ["nrom", "uxrom", "cnrom"]
+nrom = ["dep:mapper-nrom"]
+uxrom = ["dep:mapper-uxrom"]
+cnrom = ["dep:mapper-cnrom"]

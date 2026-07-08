@@ -158,12 +158,29 @@ fn cmd_run(rom: &str, _profile: Option<&str>, mode: &str, frames: u32, frame_out
     }
 }
 
+fn make_cartridge(parsed: &nptk_core::rom::NesRom) -> Result<nptk_core::mapper::Cartridge, Box<dyn std::error::Error>> {
+    let mapper = nptk_core::mapper::create_mapper(parsed.header.mapper_id, parsed)
+        .ok_or_else(|| format!("Mapper {} not supported", parsed.header.mapper_id))?;
+    Ok(nptk_core::mapper::Cartridge::new_simple(
+        nptk_core::mapper::CartridgeMetadata {
+            mapper_id: parsed.header.mapper_id,
+            submapper_id: parsed.header.submapper_id,
+            prg_rom_size: parsed.header.prg_rom_size,
+            chr_rom_size: parsed.header.chr_rom_size,
+            has_sram: parsed.header.has_sram,
+            has_trainer: parsed.header.has_trainer,
+            battery_backed: false,
+        },
+        parsed.prg_rom.clone(),
+        nptk_core::mapper::ChrStorage::Rom(parsed.chr_rom.clone().unwrap_or_default()),
+        mapper,
+    ))
+}
+
 fn run_compat_interpreter(parsed: &nptk_core::rom::NesRom, frames: u32, frame_out: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
 
-    let mapper = nptk_core::mapper::create_mapper(parsed.header.mapper_id, &parsed)
-        .ok_or_else(|| format!("Mapper {} not supported", parsed.header.mapper_id))?;
-
-    let bus = nptk_core::bus::NesBusImpl::new(mapper);
+    let cart = make_cartridge(parsed)?;
+    let bus = nptk_core::bus::NesBusImpl::new(cart);
     let mut system = nptk_core::system::NesSystem::new(bus);
 
     println!("NES System started. Mapper: {}, PRG: {}KB, CHR: {}KB",
@@ -207,9 +224,8 @@ fn run_compat_interpreter(parsed: &nptk_core::rom::NesRom, frames: u32, frame_ou
 
 fn run_recompiled_compat(parsed: &nptk_core::rom::NesRom, frames: u32, _frame_out: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     println!("Running recompiled-compat (native dispatch + interpreter fallback)");
-    let mapper = nptk_core::mapper::create_mapper(parsed.header.mapper_id, parsed)
-        .ok_or_else(|| format!("Mapper {} not supported", parsed.header.mapper_id))?;
-    let bus = nptk_core::bus::NesBusImpl::new(mapper);
+    let cart = make_cartridge(parsed)?;
+    let bus = nptk_core::bus::NesBusImpl::new(cart);
 
     struct NullSink;
     impl nptk_native_runtime::runtime::PpuEventSink for NullSink {}
@@ -245,10 +261,8 @@ fn run_native_port(parsed: &nptk_core::rom::NesRom, frames: u32, _frame_out: Opt
 fn cmd_trace(rom: &str, _profile: Option<&str>, _input: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let data = std::fs::read(rom)?;
     let parsed = nptk_core::rom::parse_rom(&data)?;
-    let mapper = nptk_core::mapper::create_mapper(parsed.header.mapper_id, &parsed)
-        .ok_or_else(|| format!("Mapper {} not supported", parsed.header.mapper_id))?;
-
-    let bus = nptk_core::bus::NesBusImpl::new(mapper);
+    let cart = make_cartridge(&parsed)?;
+    let bus = nptk_core::bus::NesBusImpl::new(cart);
     let mut system = nptk_core::system::NesSystem::new(bus);
 
     println!("Trace: executing 10000 CPU instructions...");
@@ -515,9 +529,8 @@ fn cmd_dump_chr(rom: &str, out: Option<&str>) -> Result<(), Box<dyn std::error::
 fn cmd_golden(rom: &str, profile_path: Option<&str>, input_path: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let data = std::fs::read(rom)?;
     let parsed = nptk_core::rom::parse_rom(&data)?;
-    let mapper = nptk_core::mapper::create_mapper(parsed.header.mapper_id, &parsed)
-        .ok_or_else(|| format!("Mapper {} not supported", parsed.header.mapper_id))?;
-    let bus = nptk_core::bus::NesBusImpl::new(mapper);
+    let cart = make_cartridge(&parsed)?;
+    let bus = nptk_core::bus::NesBusImpl::new(cart);
     let mut system = nptk_core::system::NesSystem::new(bus);
 
     // Load input replay if provided

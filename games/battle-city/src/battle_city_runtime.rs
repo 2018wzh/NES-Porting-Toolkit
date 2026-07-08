@@ -1,6 +1,7 @@
 //! Battle City 原生运行时
 //! 组合 nes-core 与各个原生子系统
 
+use nptk_core::mapper::{Cartridge, CartridgeMetadata, ChrStorage};
 use nptk_core::rom::NesRom;
 use crate::game_state::BattleCityStateView;
 
@@ -13,10 +14,24 @@ pub struct BattleCityRuntime {
 impl BattleCityRuntime {
     pub fn new(rom: NesRom) -> Result<Self, Box<dyn std::error::Error>> {
         let mapper = nptk_core::mapper::create_mapper(rom.header.mapper_id, &rom)
-            .ok_or_else(|| format!("Mapper {} not supported", rom.header.mapper_id))?;
+            .unwrap_or_else(|| nptk_core::mapper::registry::builtin_nrom(&rom));
+        let cartridge = Cartridge::new_simple(
+            CartridgeMetadata {
+                mapper_id: rom.header.mapper_id,
+                submapper_id: rom.header.submapper_id,
+                prg_rom_size: rom.header.prg_rom_size,
+                chr_rom_size: rom.header.chr_rom_size,
+                has_sram: rom.header.has_sram,
+                has_trainer: rom.header.has_trainer,
+                battery_backed: false,
+            },
+            rom.prg_rom.clone(),
+            ChrStorage::Rom(rom.chr_rom.clone().unwrap_or_default()),
+            mapper,
+        );
 
         Ok(Self {
-            bus: nptk_core::bus::NesBusImpl::new(mapper),
+            bus: nptk_core::bus::NesBusImpl::new(cartridge),
             _rom: rom,
         })
     }
@@ -43,6 +58,25 @@ mod tests {
         data[4] = 1;
         data[5] = 1;
         nptk_core::rom::parse_rom(&data).unwrap()
+    }
+
+    fn make_cartridge(rom: &NesRom) -> Cartridge {
+        let mapper = nptk_core::mapper::create_mapper(rom.header.mapper_id, rom)
+            .unwrap_or_else(|| nptk_core::mapper::registry::builtin_nrom(rom));
+        Cartridge::new_simple(
+            CartridgeMetadata {
+                mapper_id: rom.header.mapper_id,
+                submapper_id: rom.header.submapper_id,
+                prg_rom_size: rom.header.prg_rom_size,
+                chr_rom_size: rom.header.chr_rom_size,
+                has_sram: rom.header.has_sram,
+                has_trainer: rom.header.has_trainer,
+                battery_backed: false,
+            },
+            rom.prg_rom.clone(),
+            ChrStorage::Rom(rom.chr_rom.clone().unwrap_or_default()),
+            mapper,
+        )
     }
 
     #[test]
@@ -105,8 +139,8 @@ mod tests {
             None => return,
         };
 
-        let mapper = nptk_core::mapper::create_mapper(0, &rom).unwrap();
-        let bus = nptk_core::bus::NesBusImpl::new(mapper);
+        let cart = make_cartridge(&rom);
+        let bus = nptk_core::bus::NesBusImpl::new(cart);
         let mut system = nptk_core::system::NesSystem::new(bus);
 
         // Run enough frames to reach title screen (typically 120+ frames)
@@ -137,8 +171,8 @@ mod tests {
 
         // Run two independent NES instances and compare frame hashes
         let run_frames = |count: u32| -> Vec<u64> {
-            let mapper = nptk_core::mapper::create_mapper(0, &rom).unwrap();
-            let bus = nptk_core::bus::NesBusImpl::new(mapper);
+            let cart = make_cartridge(&rom);
+            let bus = nptk_core::bus::NesBusImpl::new(cart);
             let mut system = nptk_core::system::NesSystem::new(bus);
             let mut hashes = Vec::new();
             for _ in 0..count {
@@ -165,8 +199,8 @@ mod tests {
             None => return,
         };
 
-        let mapper = nptk_core::mapper::create_mapper(0, &rom).unwrap();
-        let bus = nptk_core::bus::NesBusImpl::new(mapper);
+        let cart = make_cartridge(&rom);
+        let bus = nptk_core::bus::NesBusImpl::new(cart);
         let mut system = nptk_core::system::NesSystem::new(bus);
 
         // Run 180 frames (~3 seconds) to reach title screen

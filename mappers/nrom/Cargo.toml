@@ -1,0 +1,10 @@
+[package]
+name = "mapper-nrom"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+nptk-core = { path = "../../crates/nptk-core" }
+linkme.workspace = true
+serde_json.workspace = true

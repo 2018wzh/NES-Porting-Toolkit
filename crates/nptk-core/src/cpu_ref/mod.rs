@@ -335,7 +335,20 @@ mod tests {
         data[vec_base + 2] = reset_vec as u8;
         data[vec_base + 3] = (reset_vec >> 8) as u8;
         let rom = crate::rom::parse_rom(&data).unwrap();
-        NesBusImpl::new(crate::mapper::create_mapper(0, &rom).unwrap())
+        // 优先使用 linkme 注册的 mapper，回退到内置 NROM
+        let mapper = crate::mapper::create_mapper(0, &rom)
+            .unwrap_or_else(|| crate::mapper::registry::builtin_nrom(&rom));
+        let cartridge = crate::mapper::Cartridge::new_simple(
+            crate::mapper::CartridgeMetadata {
+                mapper_id: 0, submapper_id: 0,
+                prg_rom_size: 1, chr_rom_size: 1,
+                has_sram: false, has_trainer: false, battery_backed: false,
+            },
+            rom.prg_rom.clone(),
+            crate::mapper::ChrStorage::Rom(rom.chr_rom.clone().unwrap_or_default()),
+            mapper,
+        );
+        NesBusImpl::new(cartridge)
     }
 
     // ─── Test 1: CPU reset ─────

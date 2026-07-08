@@ -18,9 +18,8 @@
 
 use crate::apu_compat::ApuCompat;
 use crate::controller::NesControllerPort;
-use crate::mapper::Mapper;
+use crate::mapper::Cartridge;
 use crate::ppu_compat::PpuCompat;
-use std::boxed::Box;
 
 /// NesBus trait — 所有总线实现需实现此接口
 pub trait NesBus {
@@ -38,18 +37,19 @@ pub struct NesBusImpl {
     pub ram: [u8; 0x800],
     pub ppu: PpuCompat,
     pub apu: ApuCompat,
-    pub mapper: Box<dyn Mapper>,
+    pub cartridge: Cartridge,
     pub controller: [NesControllerPort; 2],
     pub cycles: u64,
 }
 
 impl NesBusImpl {
-    pub fn new(mapper: Box<dyn Mapper>) -> Self {
+    pub fn new(cartridge: Cartridge) -> Self {
+        let mirroring = cartridge.mirroring();
         NesBusImpl {
             ram: [0; 0x800],
-            ppu: PpuCompat::new(mapper.mirroring()),
+            ppu: PpuCompat::new(mirroring),
             apu: ApuCompat::new(),
-            mapper,
+            cartridge,
             controller: [NesControllerPort::new(), NesControllerPort::new()],
             cycles: 0,
         }
@@ -57,10 +57,10 @@ impl NesBusImpl {
 
     /// Render the PPU frame via safe field-level borrow splitting.
     ///
-    /// The compiler sees that `self.ppu` and `self.mapper` are disjoint
+    /// The compiler sees that `self.ppu` and `self.cartridge` are disjoint
     /// fields of `NesBusImpl`, making this call sound.
     pub fn render_ppu_frame(&mut self) {
-        self.ppu.render_frame(&mut *self.mapper);
+        self.ppu.render_frame(&mut self.cartridge);
     }
 }
 
@@ -92,8 +92,8 @@ impl NesBus for NesBusImpl {
             0x4020..=0x5FFF => 0,
             0x6000..=0x7FFF => 0,
             0x8000..=0xFFFF => {
-                // PRG-ROM via Mapper
-                self.mapper.cpu_read(addr).unwrap_or(0)
+                // PRG-ROM via Cartridge/Mapper
+                self.cartridge.cpu_read(addr).unwrap_or(0)
             }
         }
     }
@@ -133,7 +133,7 @@ impl NesBus for NesBusImpl {
             0x4020..=0x5FFF => {}
             0x6000..=0x7FFF => {}
             0x8000..=0xFFFF => {
-                self.mapper.cpu_write(addr, value);
+                self.cartridge.cpu_write(addr, value);
             }
         }
     }
@@ -141,12 +141,12 @@ impl NesBus for NesBusImpl {
     fn ppu_read(&mut self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x1FFF => {
-                // Pattern table
-                self.mapper.ppu_read(addr).unwrap_or(0)
+                // Pattern table via Cartridge/Mapper
+                self.cartridge.ppu_read(addr).unwrap_or(0)
             }
             0x2000..=0x3EFF => {
                 // Nametable + mirrors
-                self.ppu.read_nametable(addr, self.mapper.mirroring())
+                self.ppu.read_nametable(addr, self.cartridge.mirroring())
             }
             0x3F00..=0x3FFF => {
                 // Palette
@@ -159,13 +159,11 @@ impl NesBus for NesBusImpl {
     fn ppu_write(&mut self, addr: u16, value: u8) {
         match addr {
             0x0000..=0x1FFF => {
-                if self.mapper.ppu_write(addr, value) {
-                    // CHR-RAM write
-                }
+                self.cartridge.ppu_write(addr, value);
             }
             0x2000..=0x3EFF => {
                 self.ppu
-                    .write_nametable(addr, value, self.mapper.mirroring());
+                    .write_nametable(addr, value, self.cartridge.mirroring());
             }
             0x3F00..=0x3FFF => {
                 self.ppu.write_palette(addr, value);
@@ -180,6 +178,8 @@ impl NesBus for NesBusImpl {
         self.ppu.step(cycles * 3);
         // APU runs at same rate as CPU
         self.apu.step(cycles);
+        // Mapper CPU tick — 用于 MMC3 等需要 CPU 周期计数的芯片
+        self.cartridge.cpu_tick(cycles);
     }
 
     fn tick(&mut self) {

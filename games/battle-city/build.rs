@@ -39,10 +39,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 只支持 Mapper 0 (NROM)
     if rom.header.mapper_id != 0 {
         println!(
-            "cargo:warning=Mapper {} not supported for AOT. Only Mapper 0 (NROM) supported.",
+            "cargo:warning=Mapper {} AOT: blocks discovered from linear PRG-ROM. \
+             Bank-switched code will fall back to interpreter.",
             rom.header.mapper_id
         );
-        return Ok(());
     }
 
     // 提取向量表

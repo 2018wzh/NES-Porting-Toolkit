@@ -10,7 +10,7 @@
 //! - 基本背景和精灵渲染
 //! - NMI 检测 ($2002 VBlank 标志)
 
-use crate::mapper::Mapper;
+use crate::mapper::Cartridge;
 use crate::rom::Mirroring;
 
 /// PPU 兼容实现
@@ -319,6 +319,13 @@ impl PpuCompat {
             }
             Mirroring::ScreenAOnly => addr & 0x03FF,
             Mirroring::ScreenBOnly => 0x0400 | (addr & 0x03FF),
+            Mirroring::MapperControlled => {
+                // MapperControlled 由 Mapper 动态决定，默认使用 Horizontal
+                match addr & 0x0C00 {
+                    0x0000 | 0x0400 => addr & 0x03FF,
+                    _ => 0x0400 | (addr & 0x03FF),
+                }
+            }
         }
     }
 
@@ -359,7 +366,7 @@ impl PpuCompat {
 
     /// 渲染一行, 需要外部提供 bus 来读取图案表数据
     /// 由外部循环调用时提供 bus
-    pub fn render_scanline_external(&mut self, y: u16, mapper: &mut dyn Mapper) {
+    pub fn render_scanline_external(&mut self, y: u16, cartridge: &mut Cartridge) {
         if !self.is_rendering_enabled() {
             // 渲染关闭: 填充背景色
             let bg = self.read_palette_internal_external(None);
@@ -368,8 +375,8 @@ impl PpuCompat {
             }
             return;
         }
-        self.render_background(y, mapper);
-        self.render_sprites(y, mapper);
+        self.render_background(y, cartridge);
+        self.render_sprites(y, cartridge);
     }
 
     fn render_scanline(&mut self, _y: u16) {
@@ -418,7 +425,7 @@ impl PpuCompat {
     }
 
     /// 渲染整个可见区域
-    pub fn render_frame(&mut self, mapper: &mut dyn Mapper) {
+    pub fn render_frame(&mut self, cartridge: &mut Cartridge) {
         if self.mask & 0x18 == 0 {
             // 渲染关闭: 用背景色填充整个帧缓冲
             let bg = self.read_palette_internal_external(None);
@@ -430,7 +437,7 @@ impl PpuCompat {
         // Copy t→v for rendering (pre-render scanline behavior)
         self.v = (self.v & 0x041F) | (self.t & 0x7BE0);
         for y in 0..240 {
-            self.render_scanline_external(y, mapper);
+            self.render_scanline_external(y, cartridge);
             self.increment_y();
         }
     }
@@ -464,7 +471,7 @@ impl PpuCompat {
         self.palette[idx]
     }
 
-    fn render_background(&mut self, y: u16, mapper: &mut dyn Mapper) {
+    fn render_background(&mut self, y: u16, cartridge: &mut Cartridge) {
         let fine_y = (y.wrapping_add(self.v >> 12)) & 0x07;
         let tile_row = ((self.v >> 8) & 0x0F) as u16; // coarse Y from v
         let nametable_base = if self.ctrl & 0x01 != 0 {
@@ -505,8 +512,8 @@ impl PpuCompat {
                 0x0000
             };
             let tile_addr = pattern_table + (tile_idx as u16) * 16 + fine_y;
-            let plane0 = mapper.ppu_read(tile_addr).unwrap_or(0);
-            let plane1 = mapper.ppu_read(tile_addr + 8).unwrap_or(0);
+            let plane0 = cartridge.ppu_read(tile_addr).unwrap_or(0);
+            let plane1 = cartridge.ppu_read(tile_addr + 8).unwrap_or(0);
 
             let fine_x = (x & 0x07) as u8;
             let bit = 7 - fine_x;
@@ -523,7 +530,7 @@ impl PpuCompat {
         }
     }
 
-    fn render_sprites(&mut self, y: u16, mapper: &mut dyn Mapper) {
+    fn render_sprites(&mut self, y: u16, cartridge: &mut Cartridge) {
         let _sprites_enabled = self.mask & 0x10 != 0;
         let mut sprite_count = 0;
 
@@ -576,8 +583,8 @@ impl PpuCompat {
                 }
             }
 
-            let plane0 = mapper.ppu_read(tile_addr).unwrap_or(0);
-            let plane1 = mapper.ppu_read(tile_addr + 8).unwrap_or(0);
+            let plane0 = cartridge.ppu_read(tile_addr).unwrap_or(0);
+            let plane1 = cartridge.ppu_read(tile_addr + 8).unwrap_or(0);
 
             for bit in 0..8u8 {
                 let mut src_bit = bit;
@@ -630,21 +637,24 @@ impl PpuCompat {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mapper::{
+        Cartridge, CartridgeMetadata, ChrStorage, MapperChip, MapperContext,
+        MapperSaveState,
+    };
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
-    /// Minimal Mapper for testing — only provides CHR-ROM pattern table data.
-    struct ChrMapper {
+    /// Minimal MapperChip for testing — only provides CHR-ROM pattern table data.
+    struct TestMapper {
         chr: Vec<u8>,
         mirroring: Mirroring,
     }
-    impl Mapper for ChrMapper {
-        fn cpu_read(&mut self, _addr: u16) -> Option<u8> {
-            None
-        }
-        fn cpu_write(&mut self, _addr: u16, _value: u8) -> bool {
-            false
-        }
-        fn ppu_read(&mut self, addr: u16) -> Option<u8> {
-            // Only handle pattern table range ($0000-$1FFF)
+    impl MapperChip for TestMapper {
+        fn mapper_id(&self) -> u16 { 0 }
+        fn name(&self) -> &'static str { "Test" }
+        fn cpu_read(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16) -> Option<u8> { None }
+        fn cpu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool { false }
+        fn ppu_read(&mut self, _ctx: &Rc<RefCell<MapperContext>>, addr: u16) -> Option<u8> {
             if addr < 0x2000 {
                 let idx = (addr as usize) % self.chr.len();
                 Some(self.chr[idx])
@@ -652,15 +662,10 @@ mod tests {
                 None
             }
         }
-        fn ppu_write(&mut self, _addr: u16, _value: u8) -> bool {
-            false
-        }
-        fn mirroring(&self) -> Mirroring {
-            self.mirroring
-        }
-        fn mapper_id(&self) -> u16 {
-            0
-        }
+        fn ppu_write(&mut self, _ctx: &Rc<RefCell<MapperContext>>, _addr: u16, _value: u8) -> bool { false }
+        fn mirroring(&self) -> Mirroring { self.mirroring }
+        fn save_state(&self) -> MapperSaveState { MapperSaveState::new(0) }
+        fn load_state(&mut self, _state: &MapperSaveState) {}
     }
 
     #[test]
@@ -680,11 +685,18 @@ mod tests {
         // Set up palette: color index 3 in palette 3 → address $3F0F, value = 0x20
         ppu.palette[0x0F] = 0x20;
 
-        let mut mapper = ChrMapper {
-            chr,
-            mirroring: Mirroring::Horizontal,
-        };
-        ppu.render_frame(&mut mapper);
+        let mapper = TestMapper { chr, mirroring: Mirroring::Horizontal };
+        let mut cartridge = Cartridge::new_simple(
+            CartridgeMetadata {
+                mapper_id: 0, submapper_id: 0,
+                prg_rom_size: 0, chr_rom_size: 1,
+                has_sram: false, has_trainer: false, battery_backed: false,
+            },
+            vec![],
+            ChrStorage::Rom(vec![0; 8192]),
+            Box::new(mapper),
+        );
+        ppu.render_frame(&mut cartridge);
         assert!(
             ppu.frame[0] != 0,
             "Pixel should be non-zero, got {}",

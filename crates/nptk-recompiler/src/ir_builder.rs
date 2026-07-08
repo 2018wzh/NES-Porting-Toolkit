@@ -46,17 +46,49 @@ impl IrBuilder {
             match Self::lift_opcode(opcode, bytes, offset, instr_addr) {
                 Some((ir_ops, consumed)) => {
                     ops.extend(ir_ops);
+                    // 每条指令后追加周期推进
+                    let cycles = Self::instruction_cycles(opcode);
+                    ops.push(IrOp::AdvanceCycles(cycles));
                     offset += consumed;
                 }
                 None => {
                     // Unknown opcode — emit NOP as placeholder
                     ops.push(IrOp::Nop);
+                    ops.push(IrOp::AdvanceCycles(2)); // 未知指令按 2 周期估算
                     offset += 1;
                 }
             }
         }
 
         ops
+    }
+
+    /// 返回 6502 指令的 CPU 周期数（不考虑跨页惩罚）
+    fn instruction_cycles(opcode: u8) -> u8 {
+        match opcode {
+            // 1-byte implied/accumulator
+            0x00|0x08|0x18|0x28|0x38|0x48|0x58|0x68|0x78|0x88|0x98|0xA8|0xB8|0xC8|0xD8|0xE8|0xF8 => 2,
+            0x0A|0x2A|0x4A|0x6A|0x8A|0x9A|0xAA|0xBA|0xCA|0xEA => 2,
+            0x40|0x60 => 6, // RTI, RTS
+            // 2-byte immediate
+            0xA9|0xA2|0xA0|0x69|0xE9|0xC9|0xE0|0xC0|0x29|0x09|0x49 => 2,
+            // 2-byte zeropage
+            0xA5|0x85|0xA6|0x86|0xA4|0x84|0x65|0xE5|0x25|0x05|0x45|0xC5|0xE4|0xC4|0xE6|0xC6|0x24|0x06|0x46|0x26|0x66 => 3,
+            0xB5|0x95|0xB4|0x94|0x75|0xF5|0x35|0x15|0x55|0xD5|0xF6|0xD6|0x16|0x56|0x36|0x76 => 4,
+            0xB6|0x96 => 4,
+            // indirect
+            0xA1|0x81|0x61|0xE1|0x21|0x01|0x41|0xC1 => 6,
+            0xB1|0x91|0x71|0xF1|0x31|0x11|0x51|0xD1 => 5,
+            // 3-byte absolute
+            0xAD|0x8D|0xAE|0x8E|0xAC|0x8C|0x6D|0xED|0x2D|0x0D|0x4D|0xCD|0xEC|0xCC|0xEE|0xCE|0x2C|0x0E|0x4E|0x2E|0x6E => 4,
+            0xBD|0x9D|0xBC|0xBE|0x7D|0xFD|0x3D|0x1D|0x5D|0xDD|0xFE|0xDE|0x1E|0x5E|0x3E|0x7E => 4,
+            0xB9|0x99|0x79|0xF9|0x39|0x19|0x59|0xD9 => 4,
+            // JMP/JSR
+            0x4C => 3, 0x6C => 5, 0x20 => 6,
+            // branches (not taken)
+            0x10|0x30|0x50|0x70|0x90|0xB0|0xD0|0xF0 => 2,
+            _ => 2,
+        }
     }
 
     /// Convert a single 6502 opcode and its operands into IR ops.
@@ -399,39 +431,45 @@ mod tests {
     fn test_lift_lda_immediate() {
         let bytes = &[0xA9, 0x42];
         let ops = IrBuilder::lift_block(bytes, 0x8000);
-        assert_eq!(ops.len(), 1);
+        // 每条指令后追加 AdvanceCycles
+        assert_eq!(ops.len(), 2);
         assert!(matches!(ops[0], IrOp::LoadA(Operand::Immediate(0x42))));
+        assert!(matches!(ops[1], IrOp::AdvanceCycles(2)));
     }
 
     #[test]
     fn test_lift_jmp_absolute() {
         let bytes = &[0x4C, 0x00, 0x80];
         let ops = IrBuilder::lift_block(bytes, 0x8000);
-        assert_eq!(ops.len(), 1);
+        assert_eq!(ops.len(), 2);
         assert!(matches!(ops[0], IrOp::Jump(0x8000)));
+        assert!(matches!(ops[1], IrOp::AdvanceCycles(3)));
     }
 
     #[test]
     fn test_lift_rts() {
         let bytes = &[0x60];
         let ops = IrBuilder::lift_block(bytes, 0x8000);
-        assert_eq!(ops.len(), 1);
+        assert_eq!(ops.len(), 2);
         assert!(matches!(ops[0], IrOp::Return));
+        assert!(matches!(ops[1], IrOp::AdvanceCycles(6)));
     }
 
     #[test]
     fn test_lift_nop() {
         let bytes = &[0xEA];
         let ops = IrBuilder::lift_block(bytes, 0x8000);
-        assert_eq!(ops.len(), 1);
+        assert_eq!(ops.len(), 2);
         assert!(matches!(ops[0], IrOp::Nop));
+        assert!(matches!(ops[1], IrOp::AdvanceCycles(2)));
     }
 
     #[test]
     fn test_lift_branch() {
         let bytes = &[0xD0, 0x02]; // BNE +2 at $8000 → target = $8000 + 2 + 2 = $8004
         let ops = IrBuilder::lift_block(bytes, 0x8000);
-        assert_eq!(ops.len(), 1);
+        assert_eq!(ops.len(), 2);
         assert!(matches!(ops[0], IrOp::Branch { condition: BranchCondition::Ne, target: 0x8004 }));
+        assert!(matches!(ops[1], IrOp::AdvanceCycles(2)));
     }
 }

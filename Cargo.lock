@@ -1950,6 +1950,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "linkme"
+version = "0.3.36"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e83272d46373fb8decca684579ac3e7c8f3d71d4cc3aa693df8759e260ae41cf"
+dependencies = [
+ "linkme-impl",
+]
+
+[[package]]
+name = "linkme-impl"
+version = "0.3.36"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32d59e20403c7d08fe62b4376edfe5c7fb2ef1e6b1465379686d0f21c8df444b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2013,6 +2033,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "mapper-cnrom"
+version = "0.1.0"
+dependencies = [
+ "linkme",
+ "nptk-core",
+ "serde_json",
+]
+
+[[package]]
+name = "mapper-nrom"
+version = "0.1.0"
+dependencies = [
+ "linkme",
+ "nptk-core",
+ "serde_json",
+]
+
+[[package]]
+name = "mapper-uxrom"
+version = "0.1.0"
+dependencies = [
+ "linkme",
+ "nptk-core",
+ "serde_json",
 ]
 
 [[package]]
@@ -2276,9 +2323,11 @@ name = "nptk-core"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "linkme",
  "mos6502",
  "nptk-profile",
  "serde",
+ "serde_json",
  "tracing",
 ]
 
@@ -2291,6 +2340,17 @@ dependencies = [
  "nptk-core",
  "serde",
  "tracing",
+]
+
+[[package]]
+name = "nptk-mapper"
+version = "0.1.0"
+dependencies = [
+ "linkme",
+ "mapper-cnrom",
+ "mapper-nrom",
+ "mapper-uxrom",
+ "nptk-core",
 ]
 
 [[package]]

@@ -1,24 +1,48 @@
-//! Mapper 抽象与实现
+//! Mapper 抽象与注册机制
+//!
+//! 本模块定义了 NES/Famicom 卡带芯片（Mapper）的核心接口和类型。
+//!
+//! # 架构
+//!
+//! - **MapperChip trait** — 所有 mapper 需实现的核心接口
+//! - **MapperContext** — mapper 运行上下文（Rc<RefCell<>> 共享）
+//! - **Cartridge** — 卡带容器，封装 mapper + 存储
+//! - **AddressMapper** — 地址翻译辅助 trait
+//! - **registry** — 基于 linkme 的分布式注册机制
+//!
+//! # 依赖关系
+//!
+//! ```text
+//! nptk-core::mapper (接口定义)
+//!   ↑                    ↑
+//! nptk-mapper ───────────┤  (重导出 + 聚合)
+//!   ↑                    ↑
+//! mapper-nrom ───────────┤  (linkme 注册)
+//! mapper-uxrom ──────────┤  (linkme 注册)
+//! ```
 
-use crate::rom::Mirroring;
-use std::boxed::Box;
+pub mod address_mapper;
+pub mod audio;
+pub mod cartridge;
+pub mod context;
+pub mod event_sink;
+pub mod map_result;
+pub mod mapper_chip;
+pub mod registry;
+pub mod types;
 
-pub mod nrom;
-
-/// Mapper trait — 所有 mapper 需实现此接口
-pub trait Mapper {
-    fn cpu_read(&mut self, addr: u16) -> Option<u8>;
-    fn cpu_write(&mut self, addr: u16, value: u8) -> bool;
-    fn ppu_read(&mut self, addr: u16) -> Option<u8>;
-    fn ppu_write(&mut self, addr: u16, value: u8) -> bool;
-    fn mirroring(&self) -> Mirroring;
-    fn mapper_id(&self) -> u16;
-}
-
-/// 根据 mapper ID 创建 mapper 实例
-pub fn create_mapper(mapper_id: u16, rom: &crate::rom::NesRom) -> Option<Box<dyn Mapper>> {
-    match mapper_id {
-        0 => Some(Box::new(nrom::Mapper0Nrom::new(rom))),
-        _ => None,
-    }
-}
+// 重导出关键类型到 mapper 模块根
+pub use address_mapper::AddressMapper;
+pub use audio::ExpansionAudio;
+pub use cartridge::{Cartridge, CartridgeMetadata};
+pub use context::MapperContext;
+pub use event_sink::{CartridgeEventSink, NullEventSink};
+pub use map_result::{
+    CpuMapResult, CpuWriteAction, PpuMapResult, PpuWriteAction,
+};
+pub use mapper_chip::MapperChip;
+pub use registry::create_mapper;
+pub use types::{
+    ChrStorage, IrqState, MapperDebugInfo, MapperSaveState, NesRegion,
+    PrgRam, PpuAccessKind, PpuBusEvent,
+};

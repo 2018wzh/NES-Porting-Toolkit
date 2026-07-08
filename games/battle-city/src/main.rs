@@ -79,7 +79,21 @@ impl BattleCityApp {
             let recompiled = data.and_then(|d| {
                 let rom = parse_rom(&d).ok()?;
                 let mapper = nptk_core::mapper::create_mapper(rom.header.mapper_id, &rom)?;
-                let bus = NesBusImpl::new(mapper);
+                let cartridge = nptk_core::mapper::Cartridge::new_simple(
+                    nptk_core::mapper::CartridgeMetadata {
+                        mapper_id: rom.header.mapper_id,
+                        submapper_id: rom.header.submapper_id,
+                        prg_rom_size: rom.header.prg_rom_size,
+                        chr_rom_size: rom.header.chr_rom_size,
+                        has_sram: rom.header.has_sram,
+                        has_trainer: rom.header.has_trainer,
+                        battery_backed: false,
+                    },
+                    rom.prg_rom.clone(),
+                    nptk_core::mapper::ChrStorage::Rom(rom.chr_rom.clone().unwrap_or_default()),
+                    mapper,
+                );
+                let bus = NesBusImpl::new(cartridge);
                 struct NullSink;
                 impl PpuEventSink for NullSink {}
                 impl AudioEventSink for NullSink {}
@@ -371,7 +385,7 @@ impl BattleCityApp {
                     // Read CHR data from mapper (needs &mut mapper; done first)
                     let mut chr_data = vec![0u8; 8192];
                     for addr in 0..8192u16 {
-                        if let Some(b) = self.system.bus.mapper.ppu_read(addr) {
+                        if let Some(b) = self.system.bus.cartridge.ppu_read(addr) {
                             chr_data[addr as usize] = b;
                         }
                     }
@@ -555,6 +569,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rom = parse_rom(&data)?;
     let mapper = nptk_core::mapper::create_mapper(rom.header.mapper_id, &rom)
         .ok_or_else(|| format!("Mapper {} not supported", rom.header.mapper_id))?;
+    let cartridge = nptk_core::mapper::Cartridge::new_simple(
+        nptk_core::mapper::CartridgeMetadata {
+            mapper_id: rom.header.mapper_id,
+            submapper_id: rom.header.submapper_id,
+            prg_rom_size: rom.header.prg_rom_size,
+            chr_rom_size: rom.header.chr_rom_size,
+            has_sram: rom.header.has_sram,
+            has_trainer: rom.header.has_trainer,
+            battery_backed: false,
+        },
+        rom.prg_rom.clone(),
+        nptk_core::mapper::ChrStorage::Rom(rom.chr_rom.clone().unwrap_or_default()),
+        mapper,
+    );
 
     println!("Battle City — NES Porting Toolkit");
     println!(
@@ -568,7 +596,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  F1=Render mode, F2=Debug UI, F3=Exec mode, Space=Pause, Esc=Exit");
     println!("  Mode: {}", if use_recompiled { "Recompiled" } else { "Interpreter" });
 
-    let bus = NesBusImpl::new(mapper);
+    let bus = NesBusImpl::new(cartridge);
     let system = NesSystem::new(bus);
     let mut app = BattleCityApp::new(system, use_recompiled);
 

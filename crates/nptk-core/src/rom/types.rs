@@ -7,9 +7,12 @@ pub enum Mirroring {
     Horizontal,
     Vertical,
     FourScreen,
-    /// 单屏幕（mapper 控制）
+    /// 单屏幕 A（mapper 控制）
     ScreenAOnly,
+    /// 单屏幕 B（mapper 控制）
     ScreenBOnly,
+    /// Mapper 动态控制镜像模式
+    MapperControlled,
 }
 
 /// ROM 格式

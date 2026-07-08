@@ -18,6 +18,13 @@ pub extern "C" fn nes_write8(bus: *mut nptk_core::bus::NesBusImpl, addr: u16, va
     unsafe { (*bus).cpu_write(addr, value); }
 }
 
+/// Cranelift AOT 编译的代码通过此函数推进 CPU 周期
+/// 每条 6502 指令执行后调用，使 Mapper/PPU/APU 保持同步
+#[unsafe(no_mangle)]
+pub extern "C" fn nes_advance_cycles(bus: *mut nptk_core::bus::NesBusImpl, cycles: u32) {
+    unsafe { (*bus).tick_cpu(cycles); }
+}
+
 /// PPU 事件接收器
 pub trait PpuEventSink {
     fn on_frame_complete(&mut self, _framebuffer: &[u8; 256 * 240]) {}
@@ -286,6 +293,7 @@ impl NesRuntime for CompatRuntimeBorrowed<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nptk_core::mapper::{Cartridge, CartridgeMetadata, ChrStorage};
     use nptk_core::rom::NesRom;
 
     struct NullSink;
@@ -299,12 +307,27 @@ mod tests {
         nptk_core::rom::parse_rom(&data).unwrap()
     }
 
+    fn make_cartridge(rom: &NesRom) -> Cartridge {
+        let mapper = nptk_core::mapper::create_mapper(0, rom)
+            .unwrap_or_else(|| nptk_core::mapper::registry::builtin_nrom(rom));
+        Cartridge::new_simple(
+            CartridgeMetadata {
+                mapper_id: 0, submapper_id: 0,
+                prg_rom_size: 1, chr_rom_size: 1,
+                has_sram: false, has_trainer: false, battery_backed: false,
+            },
+            rom.prg_rom.clone(),
+            ChrStorage::Rom(rom.chr_rom.clone().unwrap_or_default()),
+            mapper,
+        )
+    }
+
     #[test]
     fn test_compat_runtime_read_write() {
         let rom = make_rom();
-        let m = nptk_core::mapper::create_mapper(0, &rom).unwrap();
+        let cart = make_cartridge(&rom);
         let mut rt = CompatRuntime::new(
-            nptk_core::bus::NesBusImpl::new(m),
+            nptk_core::bus::NesBusImpl::new(cart),
             Box::new(NullSink),
             Box::new(NullSink),
         );
@@ -323,8 +346,8 @@ mod tests {
     #[test]
     fn test_recompiled_dispatch() {
         let rom = make_rom();
-        let m = nptk_core::mapper::create_mapper(0, &rom).unwrap();
-        let bus = nptk_core::bus::NesBusImpl::new(m);
+        let cart = make_cartridge(&rom);
+        let bus = nptk_core::bus::NesBusImpl::new(cart);
         let mut rt = RecompiledRuntime::new(bus, Box::new(NullSink), Box::new(NullSink));
         rt.add_block(0x8000, native_test_block);
         rt.cpu.pc = 0x8000;
@@ -355,8 +378,8 @@ mod tests {
         idata[prg_off..prg_off+prog.len()].copy_from_slice(prog);
         idata[prg_off+0x3FFC] = 0x00; idata[prg_off+0x3FFD] = 0x80;
         let irom = nptk_core::rom::parse_rom(&idata).unwrap();
-        let im = nptk_core::mapper::create_mapper(0, &irom).unwrap();
-        let ibus = nptk_core::bus::NesBusImpl::new(im);
+        let icart = make_cartridge(&irom);
+        let ibus = nptk_core::bus::NesBusImpl::new(icart);
         let mut isys = nptk_core::system::NesSystem::new(ibus);
 
         // Run interpreter for 20 instructions
@@ -371,8 +394,8 @@ mod tests {
         rdata[prg_off..prg_off+prog.len()].copy_from_slice(prog);
         rdata[prg_off+0x3FFC] = 0x00; rdata[prg_off+0x3FFD] = 0x80;
         let rrom = nptk_core::rom::parse_rom(&rdata).unwrap();
-        let rm = nptk_core::mapper::create_mapper(0, &rrom).unwrap();
-        let rbus = nptk_core::bus::NesBusImpl::new(rm);
+        let rcart = make_cartridge(&rrom);
+        let rbus = nptk_core::bus::NesBusImpl::new(rcart);
         let mut rrt = RecompiledRuntime::new(rbus, Box::new(NullSink), Box::new(NullSink));
         // No native blocks registered — runs purely on interpreter fallback
         // This verifies the fallback path produces identical results
@@ -433,8 +456,8 @@ mod tests {
         data[0x10..0x10+prog.len()].copy_from_slice(prog);
         data[0x10+0x3FFC] = 0x00; data[0x10+0x3FFD] = 0x80;
         let rom = nptk_core::rom::parse_rom(&data).unwrap();
-        let m = nptk_core::mapper::create_mapper(0, &rom).unwrap();
-        let bus = nptk_core::bus::NesBusImpl::new(m);
+        let cart = make_cartridge(&rom);
+        let bus = nptk_core::bus::NesBusImpl::new(cart);
         let mut rt = RecompiledRuntime::new(bus, Box::new(NullSink), Box::new(NullSink));
         rt.add_block(0x8000, block_8000);
 

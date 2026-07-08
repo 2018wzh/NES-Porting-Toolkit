@@ -9,6 +9,10 @@ members = [
     "crates/nptk-audio",
     "crates/nptk-input",
     "crates/nptk-tools",
+    "crates/nptk-mapper",
+    "mappers/nrom",
+    "mappers/uxrom",
+    "mappers/cnrom",
     "games/battle-city",
 ]
 
@@ -31,6 +35,7 @@ image = "0.25"
 # CPU / NES
 mos6502 = "0.10"
 disasm6502 = "0.2"
+linkme = "0.3"
 
 # Cranelift AOT 编译
 cranelift-frontend = "0.133"
