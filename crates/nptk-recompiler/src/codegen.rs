@@ -15,19 +15,19 @@
 //! - `cpu`: CPU 状态指针，通过 load/store 直接访问字段
 //! - 返回值: 下一个 PC 地址 (0 = 回退到解释器)
 
-use crate::ir6502::{IrOp, Operand, BranchCondition};
+use crate::ir6502::{BranchCondition, IrOp, Operand};
 
-use cranelift_codegen::ir::types::*;
-use cranelift_codegen::ir::condcodes::IntCC;
-use cranelift_codegen::ir::{
-    AbiParam, InstBuilder, Signature, UserFuncName, FuncRef,
-    Value, MemFlagsData, immediates::Offset32,
-};
-use cranelift_control::ControlPlane;
-use cranelift_codegen::isa::CallConv;
-use cranelift_codegen::settings::Configurable;
-use cranelift_codegen::settings;
 use cranelift_codegen::Context;
+use cranelift_codegen::ir::condcodes::IntCC;
+use cranelift_codegen::ir::types::*;
+use cranelift_codegen::ir::{
+    AbiParam, FuncRef, InstBuilder, MemFlagsData, Signature, UserFuncName, Value,
+    immediates::Offset32,
+};
+use cranelift_codegen::isa::CallConv;
+use cranelift_codegen::settings;
+use cranelift_codegen::settings::Configurable;
+use cranelift_control::ControlPlane;
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
 use cranelift_module::{Linkage, Module};
 use cranelift_object::{ObjectBuilder, ObjectModule};
@@ -71,8 +71,7 @@ impl CraneliftAot {
             .map_err(|e| format!("settings: {}", e))?;
         let flags = settings::Flags::new(flag_builder);
 
-        let isa_builder =
-            cranelift_native::builder().map_err(|e| format!("native isa: {}", e))?;
+        let isa_builder = cranelift_native::builder().map_err(|e| format!("native isa: {}", e))?;
         let isa = isa_builder
             .finish(flags)
             .map_err(|e| format!("isa finish: {}", e))?;
@@ -91,21 +90,24 @@ impl CraneliftAot {
         read8_sig.params.push(AbiParam::new(I64));
         read8_sig.params.push(AbiParam::new(I16));
         read8_sig.returns.push(AbiParam::new(I8));
-        let read8_id = module.declare_function("nes_read8", Linkage::Import, &read8_sig)
+        let read8_id = module
+            .declare_function("nes_read8", Linkage::Import, &read8_sig)
             .map_err(|e| format!("declare nes_read8: {}", e))?;
 
         let mut write8_sig = Signature::new(CallConv::SystemV);
         write8_sig.params.push(AbiParam::new(I64));
         write8_sig.params.push(AbiParam::new(I16));
         write8_sig.params.push(AbiParam::new(I8));
-        let write8_id = module.declare_function("nes_write8", Linkage::Import, &write8_sig)
+        let write8_id = module
+            .declare_function("nes_write8", Linkage::Import, &write8_sig)
             .map_err(|e| format!("declare nes_write8: {}", e))?;
 
         // Declare nes_advance_cycles(bus: *mut NesBusImpl, cycles: u32)
         let mut advance_sig = Signature::new(CallConv::SystemV);
         advance_sig.params.push(AbiParam::new(I64));
         advance_sig.params.push(AbiParam::new(I32));
-        let advance_id = module.declare_function("nes_advance_cycles", Linkage::Import, &advance_sig)
+        let advance_id = module
+            .declare_function("nes_advance_cycles", Linkage::Import, &advance_sig)
             .map_err(|e| format!("declare nes_advance_cycles: {}", e))?;
 
         Ok(CraneliftAot {
@@ -127,7 +129,7 @@ impl CraneliftAot {
         let mut sig = Signature::new(CallConv::SystemV);
         sig.params.push(AbiParam::new(I64));
         sig.params.push(AbiParam::new(I64));
-        sig.returns.push(AbiParam::new(I16));
+        sig.returns.push(AbiParam::new(I32));
 
         self.ctx.func.signature = sig.clone();
         self.ctx.func.name = func_name;
@@ -142,12 +144,21 @@ impl CraneliftAot {
         let bus_ptr = params[0];
         let cpu_ptr = params[1];
 
-        let read8_ref = self.module.declare_func_in_func(self.read8_id, &mut bcx.func);
-        let write8_ref = self.module.declare_func_in_func(self.write8_id, &mut bcx.func);
-        let advance_ref = self.module.declare_func_in_func(self.advance_id, &mut bcx.func);
+        let read8_ref = self
+            .module
+            .declare_func_in_func(self.read8_id, &mut bcx.func);
+        let write8_ref = self
+            .module
+            .declare_func_in_func(self.write8_id, &mut bcx.func);
+        let advance_ref = self
+            .module
+            .declare_func_in_func(self.advance_id, &mut bcx.func);
 
         let mut current_addr = address;
         let mut has_unconditional_return = false;
+        // total_cycles: 跟踪块内累计 CPU 周期数，初始为 0
+        let zero32 = bcx.ins().iconst(I32, 0);
+        let mut total_cycles = zero32;
 
         for op in ir_ops {
             // 在 terminal 指令之后跳过后续指令（它们位于 dead block 中）
@@ -155,10 +166,18 @@ impl CraneliftAot {
                 break;
             }
             translate_op(
-                &mut bcx, op, bus_ptr, cpu_ptr, current_addr, read8_ref, write8_ref, advance_ref,
+                &mut bcx,
+                op,
+                bus_ptr,
+                cpu_ptr,
+                current_addr,
+                read8_ref,
+                write8_ref,
+                advance_ref,
+                &mut total_cycles,
             )?;
             match op {
-                IrOp::Return | IrOp::Jump(_) | IrOp::JumpIndirect(_) => {
+                IrOp::Return | IrOp::Jump(_) | IrOp::JumpIndirect(_) | IrOp::Branch { .. } => {
                     has_unconditional_return = true;
                 }
                 _ => {}
@@ -167,8 +186,9 @@ impl CraneliftAot {
         }
 
         if !has_unconditional_return {
-            let zero = bcx.ins().iconst(I16, 0);
-            bcx.ins().return_(&[zero]);
+            // 返回 (0 << 16) | total_cycles = total_cycles
+            // 高 16 位 PC=0 表示回退到解释器
+            bcx.ins().return_(&[total_cycles]);
         }
 
         bcx.finalize();
@@ -192,16 +212,7 @@ impl CraneliftAot {
         Ok(())
     }
 
-    pub fn finish(
-        self,
-    ) -> Result<
-        (
-            Vec<u8>,
-            Vec<CompiledBlock>,
-            HashMap<u16, String>,
-        ),
-        String,
-    > {
+    pub fn finish(self) -> Result<(Vec<u8>, Vec<CompiledBlock>, HashMap<u16, String>), String> {
         let product = self.module.finish();
         let bytes = product.emit().map_err(|e| format!("emit: {}", e))?;
         Ok((bytes, self.blocks, self.block_names))
@@ -245,12 +256,7 @@ fn set_zn(bcx: &mut FunctionBuilder, cpu_ptr: Value, val: Value) {
 
 // ── Memory access helpers ──
 
-fn call_read8(
-    bcx: &mut FunctionBuilder,
-    bus_ptr: Value,
-    addr: u16,
-    read8_ref: FuncRef,
-) -> Value {
+fn call_read8(bcx: &mut FunctionBuilder, bus_ptr: Value, addr: u16, read8_ref: FuncRef) -> Value {
     let addr_val = bcx.ins().iconst(I16, addr as i64);
     let call_inst = bcx.ins().call(read8_ref, &[bus_ptr, addr_val]);
     let results = bcx.inst_results(call_inst);
@@ -304,22 +310,36 @@ fn ir_op_len(op: &IrOp) -> u16 {
         | IrOp::Compare(o) => match o {
             Operand::Immediate(_) => 2,
             Operand::Zeropage(_) | Operand::ZeropageX(_) | Operand::ZeropageY(_) => 2,
-            Operand::Address(_) | Operand::Absolute(_)
-            | Operand::AbsoluteX(_) | Operand::AbsoluteY(_) => 3,
+            Operand::Address(_)
+            | Operand::Absolute(_)
+            | Operand::AbsoluteX(_)
+            | Operand::AbsoluteY(_) => 3,
             Operand::IndirectX(_) | Operand::IndirectY(_) => 2,
         },
         IrOp::StoreA(a) | IrOp::StoreX(a) | IrOp::StoreY(a) => {
-            if *a < 0x100 { 2 } else { 3 }
+            if *a < 0x100 {
+                2
+            } else {
+                3
+            }
         }
-        IrOp::Inc(a) | IrOp::Dec(a) | IrOp::ShiftLeft(a) | IrOp::ShiftRight(a) => {
-            match *a { 0xFFFF | 0xFFFE => 1, a if a < 0x100 => 2, _ => 3 }
-        }
+        IrOp::Inc(a) | IrOp::Dec(a) | IrOp::ShiftLeft(a) | IrOp::ShiftRight(a) => match *a {
+            0xFFFF | 0xFFFE => 1,
+            a if a < 0x100 => 2,
+            _ => 3,
+        },
         IrOp::Branch { .. } => 2,
         IrOp::Jump(_) | IrOp::JumpIndirect(_) | IrOp::Call(_) => 3,
         IrOp::Return | IrOp::Nop => 1,
         IrOp::SetFlag { .. } => 1,
         IrOp::AdvanceCycles(_) => 0,
     }
+}
+
+/// 打包返回值为 u32: (pc << 16) | total_cycles
+fn pack_return(bcx: &mut FunctionBuilder, pc: u16, total_cycles: Value) -> Value {
+    let pc_val = bcx.ins().iconst(I32, ((pc as u32) << 16) as i64);
+    bcx.ins().bor(pc_val, total_cycles)
 }
 
 // ── Operand loading ──
@@ -348,9 +368,7 @@ fn load_operand(
             let addr = bcx.ins().iadd(base, y_16);
             call_read8_val(bcx, bus_ptr, addr, read8_ref)
         }
-        Operand::Address(a) | Operand::Absolute(a) => {
-            call_read8(bcx, bus_ptr, *a, read8_ref)
-        }
+        Operand::Address(a) | Operand::Absolute(a) => call_read8(bcx, bus_ptr, *a, read8_ref),
         Operand::AbsoluteX(a) => {
             let base = bcx.ins().iconst(I16, *a as i64);
             let x = load_cpu_u8(bcx, cpu_ptr, cpu_offset::X);
@@ -408,6 +426,7 @@ fn translate_op(
     read8_ref: FuncRef,
     write8_ref: FuncRef,
     advance_ref: FuncRef,
+    total_cycles: &mut Value,
 ) -> Result<(), String> {
     match op {
         IrOp::Nop => Ok(()),
@@ -499,20 +518,18 @@ fn translate_op(
             translate_inc_dec(bcx, bus_ptr, cpu_ptr, *addr, false, read8_ref, write8_ref)
         }
 
-        IrOp::ShiftLeft(addr) => {
-            translate_shift(bcx, bus_ptr, cpu_ptr, *addr, true, false, read8_ref, write8_ref)
-        }
-        IrOp::ShiftRight(addr) => {
-            translate_shift(bcx, bus_ptr, cpu_ptr, *addr, false, false, read8_ref, write8_ref)
-        }
+        IrOp::ShiftLeft(addr) => translate_shift(
+            bcx, bus_ptr, cpu_ptr, *addr, true, false, read8_ref, write8_ref,
+        ),
+        IrOp::ShiftRight(addr) => translate_shift(
+            bcx, bus_ptr, cpu_ptr, *addr, false, false, read8_ref, write8_ref,
+        ),
 
-        IrOp::Branch { condition, target } => {
-            translate_branch(bcx, cpu_ptr, *condition, *target)
-        }
+        IrOp::Branch { condition, target } => translate_branch(bcx, cpu_ptr, *condition, *target, *total_cycles),
 
         IrOp::Jump(target) => {
-            let target_val = bcx.ins().iconst(I16, *target as i64);
-            bcx.ins().return_(&[target_val]);
+            let result = pack_return(bcx, *target, *total_cycles);
+            bcx.ins().return_(&[result]);
             // Create a new unreachable block for any subsequent instructions
             let dead_block = bcx.create_block();
             bcx.switch_to_block(dead_block);
@@ -520,8 +537,8 @@ fn translate_op(
             Ok(())
         }
         IrOp::JumpIndirect(_ptr) => {
-            let zero = bcx.ins().iconst(I16, 0);
-            bcx.ins().return_(&[zero]);
+            // 间接跳转：PC=0 回退到解释器，只返回周期数
+            bcx.ins().return_(&[*total_cycles]);
             let dead_block = bcx.create_block();
             bcx.switch_to_block(dead_block);
             bcx.seal_block(dead_block);
@@ -552,16 +569,16 @@ fn translate_op(
             let sp_minus_2 = bcx.ins().iadd_imm(sp2, -1);
             store_cpu_u8(bcx, cpu_ptr, cpu_offset::SP, sp_minus_2);
 
-            let target_val = bcx.ins().iconst(I16, *target as i64);
-            bcx.ins().return_(&[target_val]);
+            let result = pack_return(bcx, *target, *total_cycles);
+            bcx.ins().return_(&[result]);
             let dead_block = bcx.create_block();
             bcx.switch_to_block(dead_block);
             bcx.seal_block(dead_block);
             Ok(())
         }
         IrOp::Return => {
-            let zero = bcx.ins().iconst(I16, 0);
-            bcx.ins().return_(&[zero]);
+            // RTS: PC=0 回退到解释器，只返回周期数
+            bcx.ins().return_(&[*total_cycles]);
             let dead_block = bcx.create_block();
             bcx.switch_to_block(dead_block);
             bcx.seal_block(dead_block);
@@ -569,12 +586,15 @@ fn translate_op(
         }
 
         IrOp::SetFlag { flag, value } => {
-            translate_set_flag(bcx, cpu_ptr, bus_ptr, *flag, *value, read8_ref, write8_ref)
+            translate_set_flag(bcx, cpu_ptr, bus_ptr, *flag, *value, read8_ref, write8_ref, total_cycles)
         }
 
         IrOp::AdvanceCycles(n) => {
             let cycles_val = bcx.ins().iconst(I32, *n as i64);
             bcx.ins().call(advance_ref, &[bus_ptr, cycles_val]);
+            // 累加到 total_cycles
+            let n32 = bcx.ins().iconst(I32, *n as i64);
+            *total_cycles = bcx.ins().iadd(*total_cycles, n32);
             Ok(())
         }
     }
@@ -774,11 +794,18 @@ fn translate_shift(
 
 // ── Branch ──
 
+/// 分支指令翻译。
+///
+/// taken 路径：return (target << 16) | total_cycles
+/// fallthrough 路径：return 0（PC=0 回退到解释器），周期数由后续块累加
+///
+/// 注意：Branch 被视为 terminal 指令，调用者应在遇到 Branch 后停止添加指令。
 fn translate_branch(
     bcx: &mut FunctionBuilder,
     cpu_ptr: Value,
     condition: BranchCondition,
     target: u16,
+    total_cycles: Value,
 ) -> Result<(), String> {
     let cond_val = match condition {
         BranchCondition::Eq => load_cpu_u8(bcx, cpu_ptr, cpu_offset::ZERO),
@@ -808,7 +835,6 @@ fn translate_branch(
     };
 
     let cond_bool = bcx.ins().icmp_imm(IntCC::NotEqual, cond_val, 0);
-    let target_val = bcx.ins().iconst(I16, target as i64);
 
     let taken_block = bcx.create_block();
     let fallthrough_block = bcx.create_block();
@@ -818,10 +844,14 @@ fn translate_branch(
 
     bcx.switch_to_block(taken_block);
     bcx.seal_block(taken_block);
-    bcx.ins().return_(&[target_val]);
+    let taken_result = pack_return(bcx, target, total_cycles);
+    bcx.ins().return_(&[taken_result]);
 
     bcx.switch_to_block(fallthrough_block);
     bcx.seal_block(fallthrough_block);
+    // fallthrough: 返回 0 PC（由后续块处理），周期数由后续块累加
+    let zero_ret = bcx.ins().iconst(I32, 0);
+    bcx.ins().return_(&[zero_ret]);
 
     Ok(())
 }
@@ -836,6 +866,7 @@ fn translate_set_flag(
     value: bool,
     read8_ref: FuncRef,
     write8_ref: FuncRef,
+    total_cycles: &mut Value,
 ) -> Result<(), String> {
     let _ = value;
     match flag {
@@ -931,8 +962,8 @@ fn translate_set_flag(
             store_cpu_u8(bcx, cpu_ptr, cpu_offset::NEGATIVE, negative);
         }
         0xFF => {
-            let zero = bcx.ins().iconst(I16, 0);
-            bcx.ins().return_(&[zero]);
+            // BRK: 返回 0 PC（回退到解释器），携带周期数
+            bcx.ins().return_(&[*total_cycles]);
             let dead_block = bcx.create_block();
             bcx.switch_to_block(dead_block);
             bcx.seal_block(dead_block);

@@ -36,7 +36,7 @@ pub fn generate_bindings(blocks: &[crate::codegen::CompiledBlock]) -> GeneratedB
     src.push_str("// ── Extern function declarations (from Cranelift AOT .a) ──\n");
     for block in blocks {
         src.push_str(&format!(
-            "unsafe extern \"C\" {{ pub fn {}(bus: *mut NesBusImpl, cpu: *mut NativeCpuState) -> u16; }}\n",
+            "unsafe extern \"C\" {{ pub fn {}(bus: *mut NesBusImpl, cpu: *mut NativeCpuState) -> u32; }}\n",
             block.name
         ));
     }
