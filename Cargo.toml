@@ -1,0 +1,57 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/nptk-core",
+    "crates/nptk-profile",
+    "crates/nptk-recompiler",
+    "crates/nptk-native-runtime",
+    "crates/nptk-wgpu",
+    "crates/nptk-audio",
+    "crates/nptk-input",
+    "crates/nptk-tools",
+    "games/battle-city",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+ron = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive"] }
+bytemuck = { version = "1", features = ["derive"] }
+image = "0.25"
+
+# CPU / NES
+mos6502 = "0.10"
+disasm6502 = "0.2"
+
+# Cranelift AOT 编译
+cranelift-frontend = "0.133"
+cranelift-codegen = "0.133"
+cranelift-module = "0.133"
+cranelift-native = "0.133"
+cranelift-object = "0.133"
+cranelift-control = "0.133"
+
+# GPU / 窗口
+wgpu = "23"
+winit = "0.30"
+pollster = "0.4"
+egui = "0.30"
+egui-wgpu = "0.30"
+egui-winit = "0.30"
+
+# 音频
+cpal = "0.15"
+kira = "0.9"
+
+# 输入
+gilrs = "0.11"
+hidapi = "2"

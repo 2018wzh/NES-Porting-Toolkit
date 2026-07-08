@@ -1,0 +1,12 @@
+[package]
+name = "nptk-input"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+tracing.workspace = true
+gilrs.workspace = true
+hidapi.workspace = true
+nptk-core = { path = "../nptk-core" }

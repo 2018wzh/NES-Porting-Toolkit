@@ -1,0 +1,9 @@
+(
+    hooks: [
+        (address: 0xE000, name: "title_screen", hook_type: NamedFunction, size: Some(256), comment: Some("Title screen entry point")),
+        (address: 0xE100, name: "game_init", hook_type: NamedFunction, size: Some(512), comment: Some("Game initialization")),
+        (address: 0xE200, name: "player_move", hook_type: NamedFunction, size: Some(256), comment: Some("Player movement handler")),
+        (address: 0xC000, name: "stage_data", hook_type: DataTable, size: Some(2048), comment: Some("Stage layout data")),
+        (address: 0xC800, name: "level_layouts", hook_type: DataTable, size: Some(2048), comment: Some("Level layout pointer table")),
+    ],
+)

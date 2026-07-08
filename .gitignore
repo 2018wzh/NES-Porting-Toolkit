@@ -1,0 +1,15 @@
+# ROM files — not distributed
+roms/*.nes
+
+# Build output
+target/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+generated/

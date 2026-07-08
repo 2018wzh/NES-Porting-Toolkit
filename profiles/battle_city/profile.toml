@@ -1,0 +1,53 @@
+[game]
+id = "battle_city"
+display_name = "Battle City"
+region = "JP"
+default_mode = "compat-interpreter"
+
+[rom]
+system = "nes"
+accepted_format = ["ines", "nes20"]
+mapper = 0
+mapper_name = "NROM"
+mirroring = "horizontal"
+prg_size = 16384
+chr_size = 8192
+has_sram = false
+
+[[rom.known_dump]]
+name = "Battle City (J)"
+# CRC values identify the user's local ROM; the repository does not contain ROM content.
+prg_crc32 = "2b1b2cb2"
+chr_crc32 = "ae8b1f50"
+combined_crc32 = ""
+
+[cpu]
+reset_vector = "auto"
+nmi_vector = "auto"
+irq_vector = "auto"
+allow_decimal_mode = false
+unknown_indirect_jump = "dispatcher"
+
+[ppu]
+initial_mode = "compat"
+native_mode = "tilemap_sprite"
+sprite_source = "oam"
+background_source = "nametable"
+chr_export = true
+palette_policy = "nes_palette"
+
+[audio]
+initial_mode = "apu_compat"
+native_sfx = "optional"
+native_bgm = "optional"
+
+[input]
+controller_ports = 2
+default_backend_policy = "auto"
+default_port_1 = "keyboard_gamepad"
+input_profile = "profiles/battle_city/input.ron"
+
+[testing]
+enable_trace_compare = true
+enable_golden_frames = true
+enable_input_replay = true

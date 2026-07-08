@@ -1,0 +1,29 @@
+(
+    ports: [
+        (
+            port: 1,
+            sources: ["keyboard", "gamepad0"],
+            mapping: {
+                "nes_a":      ["keyboard:KeyZ", "gamepad:South"],
+                "nes_b":      ["keyboard:KeyX", "gamepad:East"],
+                "nes_start":  ["keyboard:Enter", "gamepad:Start"],
+                "nes_select": ["keyboard:ShiftRight", "gamepad:Select"],
+                "nes_up":     ["keyboard:ArrowUp", "gamepad:DPadUp"],
+                "nes_down":   ["keyboard:ArrowDown", "gamepad:DPadDown"],
+                "nes_left":   ["keyboard:ArrowLeft", "gamepad:DPadLeft"],
+                "nes_right":  ["keyboard:ArrowRight", "gamepad:DPadRight"],
+            },
+            opposite_direction_policy: "neutralize",
+            analog_deadzone: 0.25,
+            analog_hysteresis: 0.05,
+        ),
+        (
+            port: 2,
+            sources: ["gamepad1"],
+            mapping: "default_nes",
+            opposite_direction_policy: "neutralize",
+            analog_deadzone: 0.25,
+            analog_hysteresis: 0.05,
+        ),
+    ],
+)

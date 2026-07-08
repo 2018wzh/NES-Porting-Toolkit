@@ -1,0 +1,6 @@
+(
+    tests: [
+        (name: "title_screen", frames: 60, input: "none", expected_ram: {"0x0078": 0x00}),
+        (name: "start_game", frames: 120, input: "start_button", expected_ram: {"0x0078": 0x01}),
+    ],
+)

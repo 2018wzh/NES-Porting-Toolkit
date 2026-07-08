@@ -1,0 +1,11 @@
+[package]
+name = "nptk-audio"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tracing.workspace = true
+cpal.workspace = true
+kira.workspace = true
+nptk-core = { path = "../nptk-core" }

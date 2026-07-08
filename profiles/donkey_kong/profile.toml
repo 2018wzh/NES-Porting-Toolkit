@@ -1,0 +1,52 @@
+[game]
+id = "donkey_kong"
+display_name = "Donkey Kong"
+region = "US"
+default_mode = "compat-interpreter"
+
+[rom]
+system = "nes"
+accepted_format = ["ines", "nes20"]
+mapper = 0
+mapper_name = "NROM"
+mirroring = "vertical"
+prg_size = 16384
+chr_size = 8192
+has_sram = false
+
+[[rom.known_dump]]
+name = "Donkey Kong (U)"
+prg_crc32 = ""
+chr_crc32 = ""
+combined_crc32 = ""
+
+[cpu]
+reset_vector = "auto"
+nmi_vector = "auto"
+irq_vector = "auto"
+allow_decimal_mode = false
+unknown_indirect_jump = "dispatcher"
+
+[ppu]
+initial_mode = "compat"
+native_mode = "tilemap_sprite"
+sprite_source = "oam"
+background_source = "nametable"
+chr_export = true
+palette_policy = "nes_palette"
+
+[audio]
+initial_mode = "apu_compat"
+native_sfx = "optional"
+native_bgm = "optional"
+
+[input]
+controller_ports = 1
+default_backend_policy = "auto"
+default_port_1 = "keyboard_gamepad"
+input_profile = ""
+
+[testing]
+enable_trace_compare = true
+enable_golden_frames = true
+enable_input_replay = true

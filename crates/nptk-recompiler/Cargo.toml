@@ -1,0 +1,19 @@
+[package]
+name = "nptk-recompiler"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tracing.workspace = true
+disasm6502.workspace = true
+nptk-core = { path = "../nptk-core" }
+nptk-profile = { path = "../nptk-profile" }
+
+# Cranelift AOT
+cranelift-frontend.workspace = true
+cranelift-codegen.workspace = true
+cranelift-module.workspace = true
+cranelift-native.workspace = true
+cranelift-object.workspace = true
+cranelift-control.workspace = true

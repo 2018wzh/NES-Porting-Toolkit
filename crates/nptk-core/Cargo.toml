@@ -1,0 +1,12 @@
+[package]
+name = "nptk-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+tracing.workspace = true
+bytemuck.workspace = true
+mos6502.workspace = true
+nptk-profile = { path = "../nptk-profile" }

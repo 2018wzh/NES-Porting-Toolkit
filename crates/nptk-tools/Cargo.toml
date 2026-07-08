@@ -1,0 +1,24 @@
+[package]
+name = "nptk-tools"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+clap.workspace = true
+serde.workspace = true
+toml.workspace = true
+ron.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+image.workspace = true
+serde_json.workspace = true
+disasm6502.workspace = true
+nptk-core = { path = "../nptk-core" }
+nptk-profile = { path = "../nptk-profile" }
+nptk-recompiler = { path = "../nptk-recompiler" }
+nptk-native-runtime = { path = "../nptk-native-runtime" }
+nptk-wgpu = { path = "../nptk-wgpu" }
+nptk-audio = { path = "../nptk-audio" }
+nptk-input = { path = "../nptk-input" }
+nptk-battle-city = { path = "../../games/battle-city" }

@@ -1,0 +1,28 @@
+(
+    ram: {
+        // $0051: Player lives (0 = game over)
+        "lives": 0x0051,
+        // $0085: Current stage number
+        "stage_counter": 0x0085,
+        // $0080: Skip current level flag
+        "skip_current_level": 0x0080,
+        // $0019: Power-up counter / enemies killed
+        "power_counter_or_enemies_killed": 0x0019,
+        // $0086: Power-up position
+        "power_position": 0x0086,
+        // $0049: Power-up status
+        "power_status": 0x0049,
+        // $00A8: Current tank state (includes direction + moving status)
+        "current_tank_state": 0x00A8,
+        // $0089: Shield status
+        "shield_status": 0x0089,
+        // $005C: Current block type being placed/broken
+        "current_block_type": 0x005C,
+        // $00A6: Player X position (pixels)
+        "player_x": 0x00A6,
+        // $00A7: Player Y position (pixels)
+        "player_y": 0x00A7,
+        // $0078: Game mode (0=title, 1=playing, 2=game over)
+        "game_mode": 0x0078,
+    },
+)
