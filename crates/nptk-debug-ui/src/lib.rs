@@ -24,7 +24,5 @@
 pub mod debug_data;
 pub mod fltk_ui;
 
-pub use debug_data::{
-    DebugCommand, DebugData, DebugEvent, DebugUiState, InputMappings, NesButton,
-};
+pub use debug_data::{DebugCommand, DebugData, DebugEvent, DebugUiState, InputMappings, NesButton};
 pub use fltk_ui::DebugWindowHandle;

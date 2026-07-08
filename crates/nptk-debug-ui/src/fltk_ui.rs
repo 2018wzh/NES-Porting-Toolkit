@@ -4,13 +4,13 @@
 //! main (winit) thread via an `mpsc` channel.  Uses `Fl::awake()` to
 //! safely update FLTK widgets from the receiver loop.
 
-use std::sync::mpsc;
-use std::sync::Mutex;
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::mpsc;
 use std::time::Instant;
 
-use fltk::{app, button::Button, frame::Frame, group::*, input::Input, prelude::*, window::Window};
 use fltk::enums::FrameType;
+use fltk::{app, button::Button, frame::Frame, group::*, input::Input, prelude::*, window::Window};
 
 use crate::debug_data::*;
 
@@ -292,8 +292,7 @@ fn run_fltk_window(
             w.cpu_y.set_label(&format!("Y:  {:02X}", d.cpu_y));
             w.cpu_sp.set_label(&format!("SP: {:02X}", d.cpu_sp));
             w.cpu_pc.set_label(&format!("PC: {:04X}", d.cpu_pc));
-            w.cpu_cycles
-                .set_label(&format!("Cycles: {}", d.cpu_cycles));
+            w.cpu_cycles.set_label(&format!("Cycles: {}", d.cpu_cycles));
 
             let flag = |name: &str, set: bool| -> String {
                 if set {
@@ -310,16 +309,13 @@ fn run_fltk_window(
             w.cpu_flag_n.set_label(&flag("N", d.cpu_flag_n));
 
             // ── Update PPU panel ─────────────────────────────────
-            w.ppu_ctrl
-                .set_label(&format!("CTRL:   {:02X}", d.ppu_ctrl));
-            w.ppu_mask
-                .set_label(&format!("MASK:   {:02X}", d.ppu_mask));
+            w.ppu_ctrl.set_label(&format!("CTRL:   {:02X}", d.ppu_ctrl));
+            w.ppu_mask.set_label(&format!("MASK:   {:02X}", d.ppu_mask));
             w.ppu_status
                 .set_label(&format!("STATUS: {:02X}", d.ppu_status));
             w.ppu_scanline
                 .set_label(&format!("Scanline: {}", d.ppu_scanline));
-            w.ppu_cycle
-                .set_label(&format!("Cycle:    {}", d.ppu_cycle));
+            w.ppu_cycle.set_label(&format!("Cycle:    {}", d.ppu_cycle));
             w.ppu_dot.set_label(&format!("Dot:      {}", d.ppu_dot));
 
             // ── Update RAM viewer ────────────────────────────────
@@ -340,8 +336,7 @@ fn run_fltk_window(
                             break;
                         }
                         let byte = ram[a];
-                        let changed = highlight
-                            && prev_ram.map_or(false, |p| p[a] != byte);
+                        let changed = highlight && prev_ram.map_or(false, |p| p[a] != byte);
                         if changed {
                             // Use a marker for changed bytes (FLTK doesn't support
                             // inline color in Frame easily, so we use a prefix)
