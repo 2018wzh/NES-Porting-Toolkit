@@ -12,7 +12,7 @@ use nptk_core::system::NesSystem;
 use nptk_native_runtime::runtime::RecompiledRuntime;
 
 use crate::compare::{
-    compare_framebuffers, diff_to_image, frame_hash, DiffImageLayout, FramebufferDiff, FB_PIXELS,
+    DiffImageLayout, FB_PIXELS, FramebufferDiff, compare_framebuffers, diff_to_image, frame_hash,
 };
 
 /// 对比模式
@@ -206,9 +206,7 @@ impl ComparisonSession {
 
         for frame in 0..num_frames {
             // 获取输入状态
-            let input = input_provider
-                .map(|f| f(frame))
-                .unwrap_or_default();
+            let input = input_provider.map(|f| f(frame)).unwrap_or_default();
 
             // 同步输入到两个系统
             self.interpreter.bus.controller[0].set_current(input);

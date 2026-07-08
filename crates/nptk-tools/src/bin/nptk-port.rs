@@ -791,11 +791,12 @@ fn cmd_verify(
         if let Some(input_file) = input_path {
             let input_data = std::fs::read_to_string(input_file)?;
             let parsed_replay: nptk_input::replay::InputReplay = ron::from_str(&input_data)?;
-            let replay =
-                Box::new(nptk_input::replay::ReplayBackend::new(parsed_replay));
-            Some(Box::new(move |frame: u32| -> nptk_core::controller::NesControllerState {
-                replay.state_for_frame(frame as u64, 1)
-            }))
+            let replay = Box::new(nptk_input::replay::ReplayBackend::new(parsed_replay));
+            Some(Box::new(
+                move |frame: u32| -> nptk_core::controller::NesControllerState {
+                    replay.state_for_frame(frame as u64, 1)
+                },
+            ))
         } else {
             None
         };
@@ -815,13 +816,17 @@ fn cmd_verify(
 
     // 写入差异图像和报告
     let output_path = std::path::Path::new(output);
-    let written = report.write_diff_images(output_path, session.ref_frames(), session.actual_frames())?;
+    let written =
+        report.write_diff_images(output_path, session.ref_frames(), session.actual_frames())?;
     println!("\nWrote {} files to '{}'", written.len(), output);
 
     if report.all_identical() {
         println!("✓ Verification PASSED — all frames match");
     } else {
-        println!("✗ Verification FAILED — {} frames have differences", report.mismatched_frames);
+        println!(
+            "✗ Verification FAILED — {} frames have differences",
+            report.mismatched_frames
+        );
         println!("  Check diff images in '{}' for details", output);
     }
 

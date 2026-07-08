@@ -206,8 +206,11 @@ pub fn diff_to_image(
 
     // 编码为 PNG
     let mut png_bytes = Vec::new();
-    img.write_to(&mut std::io::Cursor::new(&mut png_bytes), image::ImageFormat::Png)
-        .expect("Failed to encode PNG");
+    img.write_to(
+        &mut std::io::Cursor::new(&mut png_bytes),
+        image::ImageFormat::Png,
+    )
+    .expect("Failed to encode PNG");
     png_bytes
 }
 
