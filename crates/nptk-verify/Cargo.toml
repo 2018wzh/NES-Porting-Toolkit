@@ -1,0 +1,19 @@
+[package]
+name = "nptk-verify"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tracing.workspace = true
+bytemuck.workspace = true
+image.workspace = true
+serde.workspace = true
+ron.workspace = true
+
+nptk-core = { path = "../nptk-core" }
+nptk-wgpu = { path = "../nptk-wgpu" }
+nptk-native-runtime = { path = "../nptk-native-runtime" }
+nptk-mapper = { path = "../nptk-mapper" }
+nptk-profile = { path = "../nptk-profile" }
+nptk-input = { path = "../nptk-input" }

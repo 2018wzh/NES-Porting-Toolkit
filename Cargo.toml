@@ -13,6 +13,7 @@ members = [
     "crates/nptk-tools",
     "crates/nptk-mapper",
     "crates/nptk-debug-ui",
+    "crates/nptk-verify",
     "mappers/nrom",
     "mappers/uxrom",
     "mappers/cnrom",

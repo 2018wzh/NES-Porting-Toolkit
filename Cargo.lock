@@ -2162,6 +2162,7 @@ dependencies = [
  "nptk-native-runtime",
  "nptk-profile",
  "nptk-recompiler",
+ "nptk-verify",
  "nptk-wgpu",
  "ron",
  "serde",
@@ -2169,6 +2170,23 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "nptk-verify"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "image",
+ "nptk-core",
+ "nptk-input",
+ "nptk-mapper",
+ "nptk-native-runtime",
+ "nptk-profile",
+ "nptk-wgpu",
+ "ron",
+ "serde",
+ "tracing",
 ]
 
 [[package]]

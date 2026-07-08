@@ -7,6 +7,7 @@
 //!   recompile   — 静态重编译
 //!   dump-chr    — 导出 CHR atlas
 //!   golden      — golden test 运行
+//!   verify      — 解释器 vs 重编译帧缓冲对比验证
 //!   input-test  — 输入测试
 
 use clap::{Parser, Subcommand};
@@ -93,6 +94,21 @@ enum Commands {
         #[arg(long)]
         input: Option<String>,
     },
+    /// 解释器 vs 重编译帧缓冲对比验证
+    Verify {
+        /// ROM 文件路径
+        #[arg(long)]
+        rom: String,
+        /// 运行帧数
+        #[arg(long, default_value = "60")]
+        frames: u32,
+        /// 输出目录（差异图像和报告）
+        #[arg(long, default_value = "verify_output")]
+        output: String,
+        /// 输入 replay 文件（可选）
+        #[arg(long)]
+        input: Option<String>,
+    },
     /// 输入测试
     InputTest {
         /// 后端
@@ -145,6 +161,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             profile,
             input,
         } => cmd_golden(&rom, profile.as_deref(), input.as_deref()),
+        Commands::Verify {
+            rom,
+            frames,
+            output,
+            input,
+        } => cmd_verify(&rom, frames, &output, input.as_deref()),
         Commands::InputTest {
             backend,
             record,
@@ -746,6 +768,66 @@ fn cmd_input_test(
     println!("  - replay (replay recorded inputs from file)");
     Ok(())
 }
+
+// ── verify 子命令 ──────────────────────────────────────────────────────
+
+/// 解释器 vs 重编译帧缓冲对比验证
+fn cmd_verify(
+    rom: &str,
+    frames: u32,
+    output: &str,
+    input_path: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use nptk_verify::report::{VerifyMode, create_session_from_rom};
+
+    println!("=== NES Porting Verification ===");
+    println!("ROM: {}", rom);
+    println!("Frames: {}", frames);
+    println!("Output: {}", output);
+    println!("Mode: Interpreter vs Recompiled (software renderer)\n");
+
+    // 加载输入 replay（可选）
+    let input_provider: Option<Box<dyn Fn(u32) -> nptk_core::controller::NesControllerState>> =
+        if let Some(input_file) = input_path {
+            let input_data = std::fs::read_to_string(input_file)?;
+            let parsed_replay: nptk_input::replay::InputReplay = ron::from_str(&input_data)?;
+            let replay =
+                Box::new(nptk_input::replay::ReplayBackend::new(parsed_replay));
+            Some(Box::new(move |frame: u32| -> nptk_core::controller::NesControllerState {
+                replay.state_for_frame(frame as u64, 1)
+            }))
+        } else {
+            None
+        };
+
+    // 创建对比会话
+    let mut session = create_session_from_rom(rom, VerifyMode::InterpreterVsRecompiled)?;
+
+    // 运行对比
+    let report = if let Some(ref provider) = input_provider {
+        session.run_frames(frames, Some(provider.as_ref()))
+    } else {
+        session.run_frames(frames, None)
+    };
+
+    // 输出摘要
+    println!("{}", report.summary());
+
+    // 写入差异图像和报告
+    let output_path = std::path::Path::new(output);
+    let written = report.write_diff_images(output_path, session.ref_frames(), session.actual_frames())?;
+    println!("\nWrote {} files to '{}'", written.len(), output);
+
+    if report.all_identical() {
+        println!("✓ Verification PASSED — all frames match");
+    } else {
+        println!("✗ Verification FAILED — {} frames have differences", report.mismatched_frames);
+        println!("  Check diff images in '{}' for details", output);
+    }
+
+    Ok(())
+}
+
 // Debug helper
 #[allow(dead_code)]
 fn count_nonzero(data: &[u8]) -> usize {
