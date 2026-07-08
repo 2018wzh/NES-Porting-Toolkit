@@ -572,7 +572,7 @@ impl Cpu6502 {
                 let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
                 self.status.carry = r >= 0;
                 let r8 = r as u8;
-                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.status.overflow = ((self.a as i16 ^ r) & (((!v) as i16) ^ r) & 0x80) != 0;
                 self.a = r8;
                 self.status.set_zn(self.a);
                 2
@@ -583,7 +583,7 @@ impl Cpu6502 {
                 let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
                 self.status.carry = r >= 0;
                 let r8 = r as u8;
-                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.status.overflow = ((self.a as i16 ^ r) & (((!v) as i16) ^ r) & 0x80) != 0;
                 self.a = r8;
                 self.status.set_zn(self.a);
                 3
@@ -594,7 +594,7 @@ impl Cpu6502 {
                 let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
                 self.status.carry = r >= 0;
                 let r8 = r as u8;
-                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.status.overflow = ((self.a as i16 ^ r) & (((!v) as i16) ^ r) & 0x80) != 0;
                 self.a = r8;
                 self.status.set_zn(self.a);
                 4
@@ -605,7 +605,7 @@ impl Cpu6502 {
                 let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
                 self.status.carry = r >= 0;
                 let r8 = r as u8;
-                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.status.overflow = ((self.a as i16 ^ r) & (((!v) as i16) ^ r) & 0x80) != 0;
                 self.a = r8;
                 self.status.set_zn(self.a);
                 4
@@ -616,7 +616,7 @@ impl Cpu6502 {
                 let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
                 self.status.carry = r >= 0;
                 let r8 = r as u8;
-                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.status.overflow = ((self.a as i16 ^ r) & (((!v) as i16) ^ r) & 0x80) != 0;
                 self.a = r8;
                 self.status.set_zn(self.a);
                 4
@@ -627,7 +627,7 @@ impl Cpu6502 {
                 let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
                 self.status.carry = r >= 0;
                 let r8 = r as u8;
-                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.status.overflow = ((self.a as i16 ^ r) & (((!v) as i16) ^ r) & 0x80) != 0;
                 self.a = r8;
                 self.status.set_zn(self.a);
                 4
@@ -638,7 +638,7 @@ impl Cpu6502 {
                 let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
                 self.status.carry = r >= 0;
                 let r8 = r as u8;
-                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.status.overflow = ((self.a as i16 ^ r) & (((!v) as i16) ^ r) & 0x80) != 0;
                 self.a = r8;
                 self.status.set_zn(self.a);
                 6
@@ -649,7 +649,7 @@ impl Cpu6502 {
                 let r = self.a as i16 - v as i16 - (1 - self.status.carry as i16);
                 self.status.carry = r >= 0;
                 let r8 = r as u8;
-                self.status.overflow = ((self.a as i16 ^ r) & ((-(v as i16)) ^ r) & 0x80) != 0;
+                self.status.overflow = ((self.a as i16 ^ r) & (((!v) as i16) ^ r) & 0x80) != 0;
                 self.a = r8;
                 self.status.set_zn(self.a);
                 5
@@ -1156,7 +1156,7 @@ impl Cpu6502 {
             0x50 => {
                 let offset = bus.cpu_read(pc) as i8;
                 pc = pc.wrapping_add(1);
-                if self.status.overflow {
+                if !self.status.overflow {
                     pc = pc.wrapping_add(offset as u16);
                     3
                 } else {
@@ -1166,7 +1166,7 @@ impl Cpu6502 {
             0x70 => {
                 let offset = bus.cpu_read(pc) as i8;
                 pc = pc.wrapping_add(1);
-                if !self.status.overflow {
+                if self.status.overflow {
                     pc = pc.wrapping_add(offset as u16);
                     3
                 } else {

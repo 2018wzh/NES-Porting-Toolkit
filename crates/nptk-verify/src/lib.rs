@@ -23,4 +23,5 @@
 //! ```
 
 pub mod compare;
+pub mod nes_test;
 pub mod report;
