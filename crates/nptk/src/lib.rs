@@ -62,9 +62,17 @@ pub mod controller {
 /// Mapper
 pub mod mapper {
     pub use nptk_core::mapper::{self, Cartridge, CartridgeMetadata, ChrStorage, create_mapper};
-    /// Mapper 注册表（linkme 分布式注册）
+    /// Mapper 注册表
     pub mod registry {
         pub use nptk_core::mapper::registry::*;
+    }
+
+    /// 初始化 mapper 注册表
+    ///
+    /// 在首次调用 `create_mapper()` 之前调用。
+    /// 委托给 `nptk_mapper::init()`。
+    pub fn init() {
+        nptk_mapper::init();
     }
 }
 

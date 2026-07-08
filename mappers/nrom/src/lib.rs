@@ -8,7 +8,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use nptk_core::mapper::registry::{MAPPER_REGISTRY, MapperConstructor};
 use nptk_core::mapper::types::{
     ChrStorage, IrqState, MapperDebugInfo, MapperSaveState, PpuBusEvent,
 };
@@ -129,16 +128,6 @@ impl MapperChip for Mapper000Nrom {
     }
 }
 
-// ── linkme 注册 ──
-
-/// 通过 linkme 分布式切片注册 NROM 构造器
-#[linkme::distributed_slice(MAPPER_REGISTRY)]
-static NROM: MapperConstructor = MapperConstructor {
-    mapper_id: 0,
-    name: "NROM",
-    construct: |rom| Box::new(Mapper000Nrom::new(rom)),
-};
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -215,9 +204,4 @@ mod tests {
         assert_eq!(mapper.ppu_read(&ctx, 0x0001), Some(0x02));
     }
 
-    #[test]
-    fn test_linkme_registration() {
-        let found = MAPPER_REGISTRY.iter().any(|e| e.mapper_id == 0);
-        assert!(found, "NROM should be registered in MAPPER_REGISTRY");
-    }
 }

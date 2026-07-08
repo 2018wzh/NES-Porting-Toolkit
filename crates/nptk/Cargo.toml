@@ -7,6 +7,7 @@ description = "NES Porting Toolkit — facade crate for game porting"
 
 [dependencies]
 nptk-core = { path = "../nptk-core" }
+nptk-mapper = { path = "../nptk-mapper" }
 nptk-profile = { path = "../nptk-profile" }
 nptk-native-runtime = { path = "../nptk-native-runtime" }
 nptk-app = { path = "../nptk-app" }

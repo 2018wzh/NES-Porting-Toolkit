@@ -8,17 +8,16 @@
 //! - **MapperContext** — mapper 运行上下文（Rc<RefCell<>> 共享）
 //! - **Cartridge** — 卡带容器，封装 mapper + 存储
 //! - **AddressMapper** — 地址翻译辅助 trait
-//! - **registry** — 基于 linkme 的分布式注册机制
+//! - **registry** — 显式注册机制
 //!
 //! # 依赖关系
 //!
 //! ```text
-//! nptk-core::mapper (接口定义)
-//!   ↑                    ↑
-//! nptk-mapper ───────────┤  (重导出 + 聚合)
-//!   ↑                    ↑
-//! mapper-nrom ───────────┤  (linkme 注册)
-//! mapper-uxrom ──────────┤  (linkme 注册)
+//! nptk-core::mapper::registry (全局注册表)
+//!   ↑
+//! nptk-mapper (init() 中注册所有启用的 mapper)
+//!   ↑
+//! mapper-nrom, mapper-uxrom, mapper-cnrom (提供构造器)
 //! ```
 
 pub mod address_mapper;

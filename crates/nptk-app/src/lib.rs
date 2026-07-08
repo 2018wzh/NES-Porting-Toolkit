@@ -517,6 +517,7 @@ impl<G: GameHandlers> NesApp<G> {
             match self.render_mode {
                 RenderMode::Framebuffer => {
                     rpass.set_pipeline(&renderer.fb_pipeline);
+                    rpass.set_vertex_buffer(0, renderer.dummy_vb.slice(..));
                     rpass.set_bind_group(0, &renderer.fb_bind_group, &[]);
                     rpass.draw(0..4, 0..1);
                 }

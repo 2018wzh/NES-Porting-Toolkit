@@ -16,10 +16,16 @@ pub enum RenderMode {
     Native,
 }
 
-pub fn create_nes_palette_buffer() -> [u8; 256] {
-    let mut data = [0u8; 256];
-    for (i, &(r, g, b)) in NES_PALETTE.iter().enumerate() {
-        data[i * 4..i * 4 + 4].copy_from_slice(&[r, g, b, 255]);
+pub fn create_nes_palette_buffer() -> Vec<u8> {
+    let mut data = Vec::with_capacity(64 * 16);
+    for &(r, g, b) in NES_PALETTE.iter() {
+        // WGSL array<vec4f, 64> — each vec4f is 4xf32 = 16 bytes
+        data.extend_from_slice(&bytemuck::bytes_of(&[
+            r as f32 / 255.0,
+            g as f32 / 255.0,
+            b as f32 / 255.0,
+            1.0f32,
+        ]));
     }
     data
 }
@@ -36,6 +42,8 @@ pub struct WgpuRenderer {
     pub fb_bind_group: wgpu::BindGroup,
     pub fb_pipeline: wgpu::RenderPipeline,
     palette_buffer: wgpu::Buffer,
+    /// Dummy vertex buffer for pipelines that use built-in vertex data
+    pub dummy_vb: wgpu::Buffer,
 
     // --- Native rendering mode (pub for direct render-pass access) ---
     pub render_mode: RenderMode,
@@ -222,6 +230,14 @@ impl WgpuRenderer {
             cache: None,
         });
 
+        // --- Dummy vertex buffer (for builtin-vertex pipelines) ---
+        let dummy_vb = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Dummy VB"),
+            size: 4,
+            usage: wgpu::BufferUsages::VERTEX,
+            mapped_at_creation: false,
+        });
+
         // --- Native-mode renderers ---
         let tilemap = TilemapRenderer::new(&device, surface_format);
         let sprite = SpriteRenderer::new(&device, surface_format, &tilemap.chr_atlas);
@@ -236,6 +252,7 @@ impl WgpuRenderer {
             fb_bind_group,
             fb_pipeline,
             palette_buffer,
+            dummy_vb,
             render_mode: RenderMode::Framebuffer,
             tilemap,
             sprite,

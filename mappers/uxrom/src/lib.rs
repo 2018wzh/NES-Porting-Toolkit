@@ -9,7 +9,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use nptk_core::mapper::registry::{MAPPER_REGISTRY, MapperConstructor};
 use nptk_core::mapper::types::{IrqState, MapperDebugInfo, MapperSaveState, PpuBusEvent};
 use nptk_core::mapper::{MapperChip, MapperContext};
 use nptk_core::rom::Mirroring;
@@ -138,16 +137,6 @@ impl MapperChip for Mapper002Uxrom {
     }
 }
 
-// ── linkme 注册 ──
-
-/// 通过 linkme 分布式切片注册 UxROM 构造器
-#[linkme::distributed_slice(MAPPER_REGISTRY)]
-static UXROM: MapperConstructor = MapperConstructor {
-    mapper_id: 2,
-    name: "UxROM",
-    construct: |rom| Box::new(Mapper002Uxrom::new(rom)),
-};
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,9 +219,4 @@ mod tests {
         assert_eq!(mapper.cpu_read(&ctx, 0xC000), Some(0xBB));
     }
 
-    #[test]
-    fn test_linkme_registration() {
-        let found = MAPPER_REGISTRY.iter().any(|e| e.mapper_id == 2);
-        assert!(found, "UxROM should be registered in MAPPER_REGISTRY");
-    }
 }

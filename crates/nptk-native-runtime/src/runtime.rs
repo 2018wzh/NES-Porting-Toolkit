@@ -358,7 +358,7 @@ mod tests {
 
     fn make_cartridge(rom: &NesRom) -> Cartridge {
         let mapper = nptk_core::mapper::create_mapper(0, rom)
-            .unwrap_or_else(|| nptk_core::mapper::registry::builtin_nrom(rom));
+            .expect("Mapper not registered");
         Cartridge::new_simple(
             CartridgeMetadata {
                 mapper_id: 0,

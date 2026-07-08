@@ -33,6 +33,9 @@ struct BattleCityGame {
 
 impl BattleCityGame {
     fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        // 初始化 mapper 注册表
+        nptk::mapper::init();
+
         let rom = parse_rom(ROM_DATA)?;
         let mapper = nptk::mapper::create_mapper(rom.header.mapper_id, &rom)
             .ok_or_else(|| format!("Mapper {} not supported", rom.header.mapper_id))?;
@@ -86,7 +89,7 @@ impl GameHandlers for BattleCityGame {
             // 创建一个新的 NesBusImpl 用于重编译运行时
             let rom = parse_rom(ROM_DATA).unwrap();
             let mapper = nptk::mapper::create_mapper(rom.header.mapper_id, &rom)
-                .unwrap_or_else(|| nptk::mapper::registry::builtin_nrom(&rom));
+                .expect("Mapper not registered");
             let cartridge = nptk::mapper::Cartridge::new_simple(
                 nptk::mapper::CartridgeMetadata {
                     mapper_id: rom.header.mapper_id,

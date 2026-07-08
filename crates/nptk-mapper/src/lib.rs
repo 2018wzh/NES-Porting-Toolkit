@@ -6,11 +6,11 @@
 //! # 依赖关系
 //!
 //! ```text
-//! nptk-core::mapper (接口定义)
+//! nptk-core::mapper::registry (全局注册表)
 //!   ↑
-//! nptk-mapper (重导出 + 聚合 mapper-* crate)
+//! nptk-mapper (init() 中注册所有启用的 mapper)
 //!   ↑
-//! mapper-nrom, mapper-uxrom, mapper-cnrom (linkme 注册)
+//! mapper-nrom, mapper-uxrom, mapper-cnrom (提供构造器)
 //! ```
 //!
 //! # Feature flags
@@ -31,35 +31,75 @@ pub mod prelude {
 
 // ── Feature-gated mapper 实现 ──
 //
-// 各 mapper crate 通过 linkme 的 distributed_slice 自动注册到
-// MAPPER_REGISTRY 中。只需在 Cargo.toml 中启用对应 feature，
-// 链接器会自动包含该 crate 的注册条目。
-//
-// 无需在此处编写任何额外代码。
+// 各 mapper crate 通过 init() 函数显式注册到全局注册表。
+
+#[cfg(feature = "nrom")]
+use mapper_nrom::Mapper000Nrom;
+#[cfg(feature = "uxrom")]
+use mapper_uxrom::Mapper002Uxrom;
+#[cfg(feature = "cnrom")]
+use mapper_cnrom::Mapper003Cnrom;
+
+/// 初始化 mapper 注册表
+///
+/// 必须在首次调用 `create_mapper()` 之前调用。
+/// 通常在程序入口处调用一次即可。
+///
+/// 根据启用的 feature flag，注册对应的 mapper 实现。
+pub fn init() {
+    use nptk_core::mapper::registry;
+
+    #[cfg(feature = "nrom")]
+    {
+        static NROM: registry::MapperConstructor = registry::MapperConstructor {
+            mapper_id: 0,
+            name: "NROM",
+            construct: |rom| Box::new(Mapper000Nrom::new(rom)),
+        };
+        registry::register_mapper(&NROM);
+    }
+
+    #[cfg(feature = "uxrom")]
+    {
+        static UXROM: registry::MapperConstructor = registry::MapperConstructor {
+            mapper_id: 2,
+            name: "UxROM",
+            construct: |rom| Box::new(Mapper002Uxrom::new(rom)),
+        };
+        registry::register_mapper(&UXROM);
+    }
+
+    #[cfg(feature = "cnrom")]
+    {
+        static CNROM: registry::MapperConstructor = registry::MapperConstructor {
+            mapper_id: 3,
+            name: "CNROM",
+            construct: |rom| Box::new(Mapper003Cnrom::new(rom)),
+        };
+        registry::register_mapper(&CNROM);
+    }
+}
 
 #[cfg(test)]
 mod tests {
-    use nptk_core::mapper::registry::MAPPER_REGISTRY;
+    use super::*;
 
-    /// 验证 linkme registry 可迭代
-    /// 注意：linkme distributed_slice 在跨 crate 测试时可能不生效，
-    /// 这是 linkme 的已知限制。在集成测试或完整构建中 registry 会包含条目。
     #[test]
-    fn test_registry_iterable() {
-        let count = MAPPER_REGISTRY.iter().count();
-        assert!(count >= 0);
-    }
+    fn test_init_and_create() {
+        // 先初始化
+        init();
 
-    /// 验证可通过 builtin_nrom 创建 NROM mapper
-    #[test]
-    fn test_create_nrom_builtin() {
         let mut data = vec![0u8; 16 + 16384 + 8192];
         data[0..4].copy_from_slice(b"NES\x1a");
         data[4] = 1;
         data[5] = 1;
         let rom = nptk_core::rom::parse_rom(&data).unwrap();
-        let mapper = nptk_core::mapper::registry::builtin_nrom(&rom);
-        assert_eq!(mapper.mapper_id(), 0);
-        assert_eq!(mapper.name(), "NROM (builtin)");
+
+        // NROM (mapper 0) 应该可用
+        let mapper = registry::create_mapper(0, &rom);
+        assert!(mapper.is_some(), "NROM should be registered after init");
+        if let Some(m) = mapper {
+            assert_eq!(m.mapper_id(), 0);
+        }
     }
 }

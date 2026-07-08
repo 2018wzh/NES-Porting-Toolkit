@@ -21,9 +21,8 @@ fn make_rom(prg: &[u8]) -> nptk_core::rom::NesRom {
 
 fn make_system(prg: &[u8]) -> NesSystem {
     let rom = make_rom(prg);
-    // 优先使用 linkme 注册的 mapper，回退到内置 NROM
     let mapper = nptk_core::mapper::create_mapper(0, &rom)
-        .unwrap_or_else(|| nptk_core::mapper::registry::builtin_nrom(&rom));
+        .expect("Mapper not registered");
     let cartridge = nptk_core::mapper::Cartridge::new_simple(
         nptk_core::mapper::CartridgeMetadata {
             mapper_id: 0,

@@ -10,5 +10,4 @@ serde_json.workspace = true
 tracing.workspace = true
 bytemuck.workspace = true
 mos6502.workspace = true
-linkme.workspace = true
 nptk-profile = { path = "../nptk-profile" }

@@ -33,12 +33,12 @@ pub struct PpuCompat {
     pub has_nmi: bool,
 
     // 存储
-    nametable: [u8; 4096], // 4KB 显存 (4 nametables for FourScreen support)
-    oam: [u8; 256],        // 精灵属性内存
-    palette: [u8; 32],     // 调色板
+    nametable: Box<[u8; 4096]>, // 4KB 显存 (4 nametables for FourScreen support)
+    oam: Box<[u8; 256]>,        // 精灵属性内存
+    palette: [u8; 32],          // 调色板
 
     // 帧缓冲 256×240
-    frame: [u8; 256 * 240],
+    frame: Box<[u8; 256 * 240]>,
 
     // 渲染状态
     pub scanline: u16, // 当前扫描行 (0-261)
@@ -65,14 +65,14 @@ impl PpuCompat {
             x: 0,
             w: false,
             has_nmi: false,
-            nametable: [0; 4096],
-            oam: [0; 256],
+            nametable: Box::new([0; 4096]),
+            oam: Box::new([0; 256]),
             palette: [
                 0x0F, 0x00, 0x10, 0x20, 0x0F, 0x06, 0x16, 0x26, 0x0F, 0x08, 0x18, 0x28, 0x0F, 0x0A,
                 0x1A, 0x2A, 0x0F, 0x0C, 0x1C, 0x2C, 0x0F, 0x0E, 0x1E, 0x2E, 0x0F, 0x01, 0x11, 0x21,
                 0x0F, 0x05, 0x15, 0x25,
             ],
-            frame: [0; 256 * 240],
+            frame: Box::new([0; 256 * 240]),
             scanline: 241,
             cycle: 0,
             frame_complete: false,

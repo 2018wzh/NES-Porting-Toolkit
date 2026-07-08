@@ -6,7 +6,6 @@ license.workspace = true
 
 [dependencies]
 nptk-core = { path = "../nptk-core" }
-linkme.workspace = true
 
 # Mapper 实现 crate（可选，通过 feature 控制）
 mapper-nrom = { path = "../../mappers/nrom", optional = true }
