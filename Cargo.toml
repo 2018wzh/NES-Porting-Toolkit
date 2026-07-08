@@ -12,6 +12,7 @@ members = [
     "crates/nptk",
     "crates/nptk-tools",
     "crates/nptk-mapper",
+    "crates/nptk-debug-ui",
     "mappers/nrom",
     "mappers/uxrom",
     "mappers/cnrom",
@@ -52,9 +53,6 @@ cranelift-control = "0.133"
 wgpu = "23"
 winit = "0.30"
 pollster = "0.4"
-egui = "0.30"
-egui-wgpu = "0.30"
-egui-winit = "0.30"
 
 # 音频
 cpal = "0.15"

@@ -1,7 +1,7 @@
 //! 原生应用框架 — 封装窗口/事件循环/渲染/音频/输入
 //!
 //! 提供 `NesApp` 结构体，游戏 crate 只需实现 `GameHandlers` trait，
-//! 所有平台细节（winit 事件循环、WGPU 渲染、CPAL 音频、输入轮询、egui 调试 UI）
+//! 所有平台细节（winit 事件循环、WGPU 渲染、CPAL 音频、输入轮询、FLTK 调试 UI）
 //! 都由本模块处理。
 //!
 //! # 用法
@@ -32,6 +32,7 @@ use winit::window::Window;
 
 use nptk_audio::apu_mixer::ApuMixer;
 use nptk_audio::cpal_output::CpalOutput;
+use nptk_debug_ui::{DebugCommand, DebugData, DebugWindowHandle};
 use nptk_input::backend::{
     InputBackend, InputDeviceInfo, InputEventSink, PhysicalDeviceId, RawGamepadState,
 };
@@ -39,7 +40,6 @@ use nptk_input::backends::winit_keyboard::WinitKeyboardBackend;
 use nptk_input::canonical::CanonicalGamepadState;
 use nptk_input::nes_controller::NesControllerState;
 use nptk_input::nes_controller::canonical_to_nes_port;
-use nptk_wgpu::debug_ui::DebugOverlay;
 use nptk_wgpu::renderer::{RenderMode, WgpuRenderer};
 
 // ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ pub struct FrameContext<'a> {
     pub exec_mode: &'a mut ExecMode,
     /// 渲染模式
     pub render_mode: &'a mut RenderMode,
-    /// 是否显示调试 UI
+    /// 是否显示调试 UI（由 FLTK 窗口存在与否决定）
     pub show_debug: &'a mut bool,
     /// 是否暂停
     pub paused: &'a mut bool,
@@ -79,8 +79,36 @@ pub struct FrameContext<'a> {
     pub apu_mixer: &'a mut ApuMixer,
     /// 音频发送器
     pub audio_tx: &'a mut Option<mpsc::Sender<f32>>,
-    /// 调试叠加层
-    pub debug_overlay: &'a mut DebugOverlay,
+    /// 调试数据收集器（用于发送到 FLTK 窗口）
+    pub debug_collector: &'a mut DebugCollector,
+}
+
+// ---------------------------------------------------------------------------
+// Debug collector — 替代旧的 DebugOverlay
+// ---------------------------------------------------------------------------
+
+/// 调试数据收集器 — 游戏帧回调中填充，然后由 `NesApp` 发送到 FLTK 窗口。
+pub struct DebugCollector {
+    /// 最新收集的 NES 状态
+    pub data: Option<DebugData>,
+    /// 是否启用收集（由 FLTK 窗口存在与否控制）
+    pub enabled: bool,
+}
+
+impl DebugCollector {
+    pub fn new() -> Self {
+        Self {
+            data: None,
+            enabled: false,
+        }
+    }
+
+    /// 更新调试数据（由游戏帧回调调用）
+    pub fn update(&mut self, data: DebugData) {
+        if self.enabled {
+            self.data = Some(data);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -136,14 +164,10 @@ pub struct NesApp<G: GameHandlers> {
     pub game: G,
 
     // 窗口
-    window: Option<Arc<Window>>,
+    window: Option<Arc<winit::window::Window>>,
 
     // 渲染
     renderer: Option<WgpuRenderer>,
-
-    // egui
-    egui_state: Option<egui_winit::State>,
-    egui_renderer: Option<egui_wgpu::Renderer>,
 
     // 音频
     apu_mixer: ApuMixer,
@@ -157,7 +181,9 @@ pub struct NesApp<G: GameHandlers> {
     // 状态
     paused: bool,
     render_mode: RenderMode,
-    show_debug: bool,
+
+    // FLTK 调试窗口
+    debug_handle: Option<DebugWindowHandle>,
 }
 
 impl<G: GameHandlers> NesApp<G> {
@@ -169,8 +195,6 @@ impl<G: GameHandlers> NesApp<G> {
             game,
             window: None,
             renderer: None,
-            egui_state: None,
-            egui_renderer: None,
             apu_mixer: ApuMixer::new(44100),
             cpal_output: CpalOutput::new(),
             audio_tx: None,
@@ -178,7 +202,7 @@ impl<G: GameHandlers> NesApp<G> {
             gilrs_backend: gilrs,
             paused: false,
             render_mode: RenderMode::Framebuffer,
-            show_debug: true,
+            debug_handle: None,
         }
     }
 
@@ -236,6 +260,22 @@ impl<G: GameHandlers> NesApp<G> {
         };
         backend.poll(now_ns, &mut sink);
     }
+
+    /// 切换 FLTK 调试窗口的打开/关闭
+    fn toggle_debug_window(&mut self) {
+        if self.debug_handle.is_some() {
+            // 关闭调试窗口
+            if let Some(handle) = self.debug_handle.take() {
+                let _ = handle.tx.send(DebugCommand::Shutdown);
+            }
+            println!("Debug UI: closed");
+        } else {
+            // 打开调试窗口
+            let handle = DebugWindowHandle::spawn();
+            println!("Debug UI: opened (FLTK window)");
+            self.debug_handle = Some(handle);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -252,24 +292,13 @@ impl<G: GameHandlers> ApplicationHandler for NesApp<G> {
         let window = Arc::new(
             event_loop
                 .create_window(
-                    Window::default_attributes()
+                    winit::window::Window::default_attributes()
                         .with_title(self.game.window_title())
                         .with_inner_size(winit::dpi::LogicalSize::new(w, h)),
                 )
                 .unwrap(),
         );
 
-        // 初始化 egui
-        let egui_state = egui_winit::State::new(
-            egui::Context::default(),
-            egui::ViewportId::ROOT,
-            &window,
-            None,
-            None,
-            None,
-        );
-
-        self.egui_state = Some(egui_state);
         self.window = Some(window);
     }
 
@@ -283,11 +312,6 @@ impl<G: GameHandlers> ApplicationHandler for NesApp<G> {
             Some(w) => w.clone(),
             None => return,
         };
-
-        // 让 egui 先处理事件
-        if let Some(ref mut egui_state) = self.egui_state {
-            let _ = egui_state.on_window_event(&window, &event);
-        }
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
@@ -333,8 +357,7 @@ impl<G: GameHandlers> ApplicationHandler for NesApp<G> {
                     }
                     KeyCode::F2 => {
                         if pressed {
-                            self.show_debug = !self.show_debug;
-                            println!("Debug UI: {}", self.show_debug);
+                            self.toggle_debug_window();
                         }
                     }
                     // NES 控制器按键 → 送入键盘后端
@@ -376,16 +399,6 @@ impl<G: GameHandlers> NesApp<G> {
                 pollster::block_on(WgpuRenderer::new(window, size.width, size.height))
                     .expect("Failed to create WGPU renderer"),
             );
-
-            // 创建 egui renderer
-            let renderer = self.renderer.as_ref().unwrap();
-            self.egui_renderer = Some(egui_wgpu::Renderer::new(
-                &renderer.device,
-                renderer.config.format,
-                None,
-                1,
-                false,
-            ));
         }
 
         // 首次帧时启动音频
@@ -419,23 +432,32 @@ impl<G: GameHandlers> NesApp<G> {
             let mut fb = [0u8; 256 * 240];
             let mut exec_mode = ExecMode::Interpreter;
             let mut recompiled_wrapper: Option<RecompiledRuntimeWrapper> = None;
-            let mut debug_overlay = DebugOverlay::new();
+            let mut debug_collector = DebugCollector::new();
+            debug_collector.enabled = self.debug_handle.is_some();
 
             // 调用游戏帧回调 — 游戏在此执行 NES 帧逻辑
             {
+                let mut show_debug = self.debug_handle.is_some();
                 let mut ctx = FrameContext {
                     recompiled: &mut recompiled_wrapper,
                     exec_mode: &mut exec_mode,
                     render_mode: &mut self.render_mode,
-                    show_debug: &mut self.show_debug,
+                    show_debug: &mut show_debug,
                     paused: &mut self.paused,
                     input_state: &mut input_state,
                     framebuffer: &mut fb,
                     apu_mixer: &mut self.apu_mixer,
                     audio_tx: &mut self.audio_tx,
-                    debug_overlay: &mut debug_overlay,
+                    debug_collector: &mut debug_collector,
                 };
                 self.game.run_frame(&mut ctx);
+            }
+
+            // ── 发送调试数据到 FLTK 窗口 ──────────────────────────
+            if let Some(ref handle) = self.debug_handle {
+                if let Some(data) = debug_collector.data.take() {
+                    handle.update(data);
+                }
             }
 
             // ── 渲染 ──────────────────────────────────────────────
@@ -452,30 +474,8 @@ impl<G: GameHandlers> NesApp<G> {
             }
         }
 
-        // ── egui 渲染 ────────────────────────────────────────────
-        let egui_state = self.egui_state.as_mut().unwrap();
-        let raw_input = egui_state.take_egui_input(window);
-        let egui_ctx = egui_state.egui_ctx().clone();
-
-        let egui_full_output = egui_ctx.run(raw_input, |_ctx| {
-            // 游戏帧回调中已更新 debug_overlay
-        });
-
-        let _ = egui_state.handle_platform_output(window, egui_full_output.platform_output);
-
-        let egui_primitives =
-            egui_ctx.tessellate(egui_full_output.shapes, egui_ctx.pixels_per_point());
-
-        let egui_renderer = self.egui_renderer.as_mut().unwrap();
-        let renderer = self.renderer.as_mut().unwrap();
-        for (id, delta) in egui_full_output.textures_delta.set {
-            egui_renderer.update_texture(&renderer.device, &renderer.queue, id, &delta);
-        }
-
-        let screen_descriptor = egui_wgpu::ScreenDescriptor {
-            size_in_pixels: [renderer.config.width, renderer.config.height],
-            pixels_per_point: window.scale_factor() as f32,
-        };
+        // ── WGPU 渲染（无 egui 叠加层）───────────────────────────
+        let renderer = self.renderer.as_ref().unwrap();
 
         let output = renderer
             .surface
@@ -489,17 +489,9 @@ impl<G: GameHandlers> NesApp<G> {
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 
-        egui_renderer.update_buffers(
-            &renderer.device,
-            &renderer.queue,
-            &mut encoder,
-            &egui_primitives,
-            &screen_descriptor,
-        );
-
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Combined Render Pass"),
+                label: Some("NES Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
@@ -526,15 +518,6 @@ impl<G: GameHandlers> NesApp<G> {
                     renderer.sprite.render(&mut rpass);
                 }
             }
-
-            // 绘制 egui 叠加层
-            let rpass_static: &mut wgpu::RenderPass<'static> =
-                unsafe { std::mem::transmute(&mut rpass) };
-            egui_renderer.render(rpass_static, &egui_primitives, &screen_descriptor);
-        }
-
-        for id in egui_full_output.textures_delta.free {
-            egui_renderer.free_texture(&id);
         }
 
         renderer.queue.submit([encoder.finish()]);

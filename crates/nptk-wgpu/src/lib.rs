@@ -6,3 +6,6 @@ pub mod palette;
 pub mod renderer;
 pub mod sprite;
 pub mod tilemap;
+
+// Re-export common debug types at the crate root for convenience.
+pub use debug_ui::{DebugData, DebugUiState, InputMappings, NesButton};

@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 //! Battle City — NES 原生移植
 //!
 //! 游戏特定逻辑入口。所有平台通用代码（窗口/渲染/音频/输入/调试 UI）
@@ -160,7 +162,7 @@ impl GameHandlers for BattleCityGame {
             // CHR 数据由渲染器在外部处理
         }
 
-        // 调试数据收集
+        // 调试数据收集（发送到 FLTK 调试窗口）
         if *ctx.show_debug {
             let cpu = &self.system.cpu;
             let ppu = &self.system.bus.ppu;
@@ -173,7 +175,7 @@ impl GameHandlers for BattleCityGame {
                 }
             }
 
-            ctx.debug_overlay.update_nes_state(DebugData {
+            ctx.debug_collector.update(DebugData {
                 cpu_a: cpu.a,
                 cpu_x: cpu.x,
                 cpu_y: cpu.y,

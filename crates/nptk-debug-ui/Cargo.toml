@@ -1,0 +1,13 @@
+[package]
+name = "nptk-debug-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "FLTK-based standalone debug UI window for NES Porting Toolkit"
+
+[dependencies]
+tracing.workspace = true
+ron.workspace = true
+serde.workspace = true
+fltk = "1"
+nptk-core = { path = "../nptk-core" }

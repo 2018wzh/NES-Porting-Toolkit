@@ -10,12 +10,10 @@ bytemuck.workspace = true
 image.workspace = true
 wgpu.workspace = true
 winit.workspace = true
-egui.workspace = true
-egui-wgpu.workspace = true
-egui-winit.workspace = true
 pollster.workspace = true
 ron.workspace = true
 serde.workspace = true
 nptk-core = { path = "../nptk-core" }
 nptk-native-runtime = { path = "../nptk-native-runtime" }
 nptk-input = { path = "../nptk-input" }
+nptk-debug-ui = { path = "../nptk-debug-ui" }
