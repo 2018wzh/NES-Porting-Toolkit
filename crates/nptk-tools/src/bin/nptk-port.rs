@@ -256,9 +256,9 @@ fn run_compat_interpreter(
             .enumerate()
             .map(|(i, &p)| (p as u32).wrapping_mul((i as u32 % 251) + 1))
             .fold(0, |a, b| a ^ b);
-        let pc = system.cpu.pc;
-        let ctrl = system.bus.ppu.ctrl;
-        let mask = system.bus.ppu.mask;
+        let pc = system.cpu.registers.program_counter;
+        let ctrl = system.cpu.memory.ppu.ctrl;
+        let mask = system.cpu.memory.ppu.mask;
         if frame < 5 || frame % 10 == 0 {
             println!(
                 "  Frame {:2}: PC=${:04X} fhash={:08X} CTRL=${:02X} MASK=${:02X}",
@@ -350,19 +350,19 @@ fn cmd_trace(
 
     println!("Trace: executing 10000 CPU instructions...");
     for i in 0..10000 {
-        let pc_before = system.cpu.pc;
-        let opcode = system.bus.cpu_read(pc_before);
+        let pc_before = system.cpu.registers.program_counter;
+        let opcode = system.cpu.memory.cpu_read(pc_before);
         let cycles = system.step_cpu();
         println!(
             "  {:4}: PC=${:04X} OP=${:02X} A=${:02X} X=${:02X} Y=${:02X} SP=${:02X} P=${:02X} cy={}",
             i,
             pc_before,
             opcode,
-            system.cpu.a,
-            system.cpu.x,
-            system.cpu.y,
-            system.cpu.sp,
-            system.cpu.status.to_byte(),
+            system.cpu.registers.accumulator,
+            system.cpu.registers.index_x,
+            system.cpu.registers.index_y,
+            system.cpu.registers.stack_pointer.0,
+            system.cpu.registers.status.bits(),
             cycles
         );
     }
@@ -715,7 +715,7 @@ fn cmd_golden(
         // Apply input replay if available
         if let Some(ref mut replay_backend) = replay {
             let state = replay_backend.state_for_frame(frame as u64, 1);
-            system.bus.controller[0].set_current(state);
+            system.cpu.memory.controller[0].set_current(state);
         }
 
         let fb = system.run_frame();

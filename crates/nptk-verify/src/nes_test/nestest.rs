@@ -63,7 +63,6 @@ impl LogComparison {
 
 /// nestest 运行器
 pub struct NestestRunner {
-    bus: NesBusImpl,
     cpu: Cpu6502,
     log_lines: Vec<String>,
     instruction_count: u64,
@@ -76,27 +75,26 @@ impl NestestRunner {
     ///
     /// nestest 要求从 $C000 开始执行（而非 reset 向量指向的 $C004）。
     pub fn new(rom_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut bus = create_test_bus(rom_path)?;
-        let mut cpu = Cpu6502::new();
+        let bus = create_test_bus(rom_path)?;
+        let mut cpu = Cpu6502::new(bus, nptk_core::cpu_ref::MosRicoh2a03);
 
         // nestest 特殊要求：
         // 1. 从 $C000 开始（官方 nestest.log 从 $C000 开始记录）
         // 2. 初始化 SP = $FD
         // 3. 初始化 P = $24 (中断禁用)
         // 4. 初始化 A/X/Y = 0
-        cpu.reset(&mut bus);
+        cpu.reset();
 
         // nestest 官方日志从 $C000 开始，但 reset 向量指向 $C004。
         // 我们需要手动将 PC 设为 $C000 以匹配官方日志。
-        cpu.pc = 0xC000;
-        cpu.sp = 0xFD;
-        cpu.status = nptk_core::cpu_ref::CpuFlags::from_byte(0x24);
-        cpu.a = 0;
-        cpu.x = 0;
-        cpu.y = 0;
+        cpu.registers.program_counter = 0xC000;
+        cpu.registers.stack_pointer.0 = 0xFD;
+        cpu.registers.status = nptk_core::cpu_ref::MosStatus::from_bits_truncate(0x24);
+        cpu.registers.accumulator = 0;
+        cpu.registers.index_x = 0;
+        cpu.registers.index_y = 0;
 
         Ok(NestestRunner {
-            bus,
             cpu,
             log_lines: Vec::new(),
             instruction_count: 0,
@@ -110,18 +108,20 @@ impl NestestRunner {
             return false;
         }
 
-        let pc = self.cpu.pc;
+        let pc = self.cpu.registers.program_counter;
 
         // 读取当前指令用于反汇编
-        let opcode = self.bus.cpu_read(pc);
+        let opcode = self.cpu.memory.cpu_read(pc);
 
         // 记录执行前的 CPU 状态
         let log_line = self.format_cpu_state(pc, opcode);
         self.log_lines.push(log_line);
 
         // 执行指令
-        let cycles = self.cpu.step(&mut self.bus);
-        self.bus.tick_cpu(cycles);
+        let cycles_before = self.cpu.cycles;
+        self.cpu.single_step();
+        let cycles = (self.cpu.cycles - cycles_before) as u32;
+        self.cpu.memory.tick_cpu(cycles);
         self.instruction_count += 1;
 
         // 检查是否遇到 BRK ($00) — nestest 以 BRK 结束
@@ -247,13 +247,13 @@ impl NestestRunner {
         let op_len = self.opcode_length(opcode);
         write!(&mut s, "{:02X} ", opcode).unwrap();
         if op_len >= 2 {
-            let b1 = self.bus.cpu_read(pc.wrapping_add(1));
+            let b1 = self.cpu.memory.cpu_read(pc.wrapping_add(1));
             write!(&mut s, "{:02X} ", b1).unwrap();
         } else {
             s.push_str("   ");
         }
         if op_len >= 3 {
-            let b2 = self.bus.cpu_read(pc.wrapping_add(2));
+            let b2 = self.cpu.memory.cpu_read(pc.wrapping_add(2));
             write!(&mut s, "{:02X} ", b2).unwrap();
         } else {
             s.push_str("   ");
@@ -267,11 +267,11 @@ impl NestestRunner {
         write!(
             &mut s,
             "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}",
-            self.cpu.a,
-            self.cpu.x,
-            self.cpu.y,
-            self.cpu.status.to_byte(),
-            self.cpu.sp,
+            self.cpu.registers.accumulator,
+            self.cpu.registers.index_x,
+            self.cpu.registers.index_y,
+            self.cpu.registers.status.bits(),
+            self.cpu.registers.stack_pointer.0,
         )
         .unwrap();
 
@@ -460,7 +460,7 @@ impl NestestRunner {
         match len {
             1 => format!("{}", mnemonic),
             2 => {
-                let operand = self.bus.cpu_read(pc.wrapping_add(1));
+                let operand = self.cpu.memory.cpu_read(pc.wrapping_add(1));
                 match opcode {
                     // Immediate
                     0xA0 | 0xA2 | 0xA9 | 0xC0 | 0xE0 | 0x09 | 0x29 | 0x49 | 0x69 | 0xC9 | 0xE9
@@ -496,8 +496,8 @@ impl NestestRunner {
                 }
             }
             3 => {
-                let lo = self.bus.cpu_read(pc.wrapping_add(1)) as u16;
-                let hi = self.bus.cpu_read(pc.wrapping_add(2)) as u16;
+                let lo = self.cpu.memory.cpu_read(pc.wrapping_add(1)) as u16;
+                let hi = self.cpu.memory.cpu_read(pc.wrapping_add(2)) as u16;
                 let addr = lo | (hi << 8);
                 match opcode {
                     // Absolute jumps

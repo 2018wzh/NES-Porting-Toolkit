@@ -209,8 +209,8 @@ impl ComparisonSession {
             let input = input_provider.map(|f| f(frame)).unwrap_or_default();
 
             // 同步输入到两个系统
-            self.interpreter.bus.controller[0].set_current(input);
-            self.recompiled.bus.controller[0].set_current(input);
+            self.interpreter.cpu.memory.controller[0].set_current(input);
+            self.recompiled.cpu.memory.controller[0].set_current(input);
 
             // 执行帧
             let fb_ref = self.interpreter.run_frame();

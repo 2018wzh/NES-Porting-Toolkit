@@ -103,13 +103,13 @@ impl BlarggRunner {
         // 方法 1: 检查调色板
         // blargg 测试通过后通常将背景色设为绿色 ($1A)
         // 失败时设为红色 ($16)
-        let bg_color = self.system.bus.ppu.read_palette(0x3F00);
+        let bg_color = self.system.cpu.memory.ppu.read_palette(0x3F00);
 
         // 方法 2: 检查 $6000 区域的状态码（某些测试使用）
-        let status = self.system.bus.cpu_read(0x6000);
+        let status = self.system.cpu.memory.cpu_read(0x6000);
 
         // 方法 3: 检查帧缓冲中心像素
-        let fb = *self.system.bus.ppu.frame();
+        let fb = *self.system.cpu.memory.ppu.frame();
         let center_idx = 128 + 120 * 256; // 近似中心
         let center_pixel = fb[center_idx];
 

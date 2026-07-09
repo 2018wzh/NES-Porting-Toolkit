@@ -126,32 +126,34 @@ impl NativeCpuState {
         self.negative = v & 0x80 != 0;
     }
 
-    /// Sync from interpreter CPU
+    /// Sync from interpreter CPU (mos6502)
     pub fn from_cpu(cpu: &nptk_core::cpu_ref::Cpu6502) -> Self {
+        use nptk_core::cpu_ref::MosStatus;
         NativeCpuState {
-            a: cpu.a,
-            x: cpu.x,
-            y: cpu.y,
-            sp: cpu.sp,
-            carry: cpu.status.carry,
-            zero: cpu.status.zero,
-            negative: cpu.status.negative,
-            overflow: cpu.status.overflow,
-            interrupt_disable: cpu.status.interrupt_disable,
+            a: cpu.registers.accumulator,
+            x: cpu.registers.index_x,
+            y: cpu.registers.index_y,
+            sp: cpu.registers.stack_pointer.0,
+            carry: cpu.registers.status.contains(MosStatus::PS_CARRY),
+            zero: cpu.registers.status.contains(MosStatus::PS_ZERO),
+            negative: cpu.registers.status.contains(MosStatus::PS_NEGATIVE),
+            overflow: cpu.registers.status.contains(MosStatus::PS_OVERFLOW),
+            interrupt_disable: cpu.registers.status.contains(MosStatus::PS_DISABLE_INTERRUPTS),
         }
     }
 
-    /// Write back to interpreter CPU
+    /// Write back to interpreter CPU (mos6502)
     pub fn to_cpu(&self, cpu: &mut nptk_core::cpu_ref::Cpu6502) {
-        cpu.a = self.a;
-        cpu.x = self.x;
-        cpu.y = self.y;
-        cpu.sp = self.sp;
-        cpu.status.carry = self.carry;
-        cpu.status.zero = self.zero;
-        cpu.status.negative = self.negative;
-        cpu.status.overflow = self.overflow;
-        cpu.status.interrupt_disable = self.interrupt_disable;
+        use nptk_core::cpu_ref::MosStatus;
+        cpu.registers.accumulator = self.a;
+        cpu.registers.index_x = self.x;
+        cpu.registers.index_y = self.y;
+        cpu.registers.stack_pointer.0 = self.sp;
+        cpu.registers.status.set(MosStatus::PS_CARRY, self.carry);
+        cpu.registers.status.set(MosStatus::PS_ZERO, self.zero);
+        cpu.registers.status.set(MosStatus::PS_NEGATIVE, self.negative);
+        cpu.registers.status.set(MosStatus::PS_OVERFLOW, self.overflow);
+        cpu.registers.status.set(MosStatus::PS_DISABLE_INTERRUPTS, self.interrupt_disable);
     }
 }
 
@@ -170,8 +172,11 @@ pub type CAbiBlockFn =
     unsafe extern "C" fn(bus: *mut nptk_core::bus::NesBusImpl, cpu: *mut NativeCpuState) -> u32;
 
 /// Recompiled execution mode — dispatches to native blocks, falls back to interpreter
+///
+/// 注意：mos6502 的 CPU 拥有 memory（NesBusImpl），
+/// 所有总线访问通过 `self.cpu.memory` 进行。
+/// `bus` 字段保留为 `cpu.memory` 的别名引用，用于 C ABI 兼容性。
 pub struct RecompiledRuntime {
-    pub bus: nptk_core::bus::NesBusImpl,
     pub cpu: nptk_core::cpu_ref::Cpu6502,
     pub dispatch: std::collections::HashMap<u16, NativeBlockFn>,
     /// C ABI dispatch table (from Cranelift AOT)
@@ -181,19 +186,17 @@ pub struct RecompiledRuntime {
     pub cpu_cycle: u32,
     ppu_sink: Box<dyn PpuEventSink>,
     audio_sink: Box<dyn AudioEventSink>,
-    nmi_pending: bool,
 }
 
 impl RecompiledRuntime {
     pub fn new(
-        mut bus: nptk_core::bus::NesBusImpl,
+        bus: nptk_core::bus::NesBusImpl,
         ppu: Box<dyn PpuEventSink>,
         audio: Box<dyn AudioEventSink>,
     ) -> Self {
-        let mut cpu = nptk_core::cpu_ref::Cpu6502::new();
-        cpu.reset(&mut bus);
+        let mut cpu = nptk_core::cpu_ref::Cpu6502::new(bus, nptk_core::cpu_ref::MosRicoh2a03);
+        cpu.reset();
         RecompiledRuntime {
-            bus,
             cpu,
             dispatch: std::collections::HashMap::new(),
             cabi_dispatch: std::collections::HashMap::new(),
@@ -202,31 +205,33 @@ impl RecompiledRuntime {
             cpu_cycle: 0,
             ppu_sink: ppu,
             audio_sink: audio,
-            nmi_pending: false,
         }
+    }
+
+    /// 获取 bus 的可变引用（用于 C ABI 调用）
+    pub fn bus_ptr(&mut self) -> *mut nptk_core::bus::NesBusImpl {
+        &mut self.cpu.memory as *mut nptk_core::bus::NesBusImpl
     }
 
     /// Execute one frame using native dispatch + interpreter fallback
     pub fn run_frame(&mut self) {
         use nptk_core::bus::NesBus;
-        self.bus.ppu.clear_frame_complete();
+        self.cpu.memory.ppu.clear_frame_complete();
 
-        if self.nmi_pending {
-            self.nmi_pending = false;
-            self.cpu.trigger_nmi(&mut self.bus);
-        }
+        // mos6502 内部通过 Bus::nmi_pending() 自动检测 NMI，
+        // 不再需要外部 nmi_pending 标志和手动 trigger_nmi()
 
         self.cpu_cycle = 0;
         let mut ppu_dot = 0u32;
 
         while self.cpu_cycle < nptk_core::system::CPU_CYCLES_PER_FRAME {
-            let pc = self.cpu.pc;
+            let pc = self.cpu.registers.program_counter;
 
             let cycles = if let Some(&native_fn) = self.dispatch.get(&pc) {
                 self.native_state = NativeCpuState::from_cpu(&self.cpu);
                 // Create a temporary CompatRuntime for the native call
                 let mut rt = CompatRuntime::new_borrowed(
-                    &mut self.bus,
+                    &mut self.cpu.memory,
                     &mut *self.ppu_sink,
                     &mut *self.audio_sink,
                 );
@@ -235,37 +240,34 @@ impl RecompiledRuntime {
                 let block_cycles = (result & 0xFFFF) as u32;
                 let next_pc = (result >> 16) as u16;
                 if next_pc != 0 {
-                    self.cpu.pc = next_pc;
+                    self.cpu.registers.program_counter = next_pc;
                 }
                 block_cycles
             } else if let Some(&cabi_fn) = self.cabi_dispatch.get(&pc) {
                 // C ABI dispatch (Cranelift AOT blocks)
                 self.native_state = NativeCpuState::from_cpu(&self.cpu);
-                let bus_ptr = &mut self.bus as *mut nptk_core::bus::NesBusImpl;
+                let bus_ptr = self.bus_ptr();
                 let result = unsafe { cabi_fn(bus_ptr, &mut self.native_state) };
                 self.native_state.to_cpu(&mut self.cpu);
                 let block_cycles = (result & 0xFFFF) as u32;
                 let next_pc = (result >> 16) as u16;
                 if next_pc != 0 {
-                    self.cpu.pc = next_pc;
+                    self.cpu.registers.program_counter = next_pc;
                 }
                 block_cycles
             } else {
-                self.cpu.step(&mut self.bus)
+                let cycles_before = self.cpu.cycles;
+                self.cpu.single_step();
+                (self.cpu.cycles - cycles_before) as u32
             };
 
             self.cpu_cycle += cycles;
             ppu_dot = ppu_dot.wrapping_add(cycles * 3);
-            self.bus.tick_cpu(cycles);
-
-            // 检查 PPU 是否触发了 NMI
-            if self.bus.ppu.take_nmi() {
-                self.nmi_pending = true;
-            }
+            self.cpu.memory.tick_cpu(cycles);
         }
 
         // 帧结束：渲染 PPU 帧
-        self.bus.render_ppu_frame();
+        self.cpu.memory.render_ppu_frame();
         self.frame_count += 1;
     }
 
@@ -282,10 +284,10 @@ impl RecompiledRuntime {
     }
 
     pub fn framebuffer(&self) -> &[u8; 256 * 240] {
-        self.bus.ppu.frame()
+        self.cpu.memory.ppu.frame()
     }
     pub fn ram(&self) -> &[u8; 0x800] {
-        &self.bus.ram
+        &self.cpu.memory.ram
     }
 }
 
@@ -357,6 +359,7 @@ mod tests {
     }
 
     fn make_cartridge(rom: &NesRom) -> Cartridge {
+        nptk_mapper::init();
         let mapper = nptk_core::mapper::create_mapper(0, rom).expect("Mapper not registered");
         Cartridge::new_simple(
             CartridgeMetadata {
@@ -403,7 +406,7 @@ mod tests {
         let bus = nptk_core::bus::NesBusImpl::new(cart);
         let mut rt = RecompiledRuntime::new(bus, Box::new(NullSink), Box::new(NullSink));
         rt.add_block(0x8000, native_test_block);
-        rt.cpu.pc = 0x8000;
+        rt.cpu.registers.program_counter = 0x8000;
         rt.run_frame();
         assert_eq!(rt.ram()[0x0050], 0x42);
     }
@@ -459,8 +462,10 @@ mod tests {
         // No native blocks registered — runs purely on interpreter fallback
         // This verifies the fallback path produces identical results
         for _ in 0..20 {
-            rrt.cpu.step(&mut rrt.bus);
-            rrt.bus.tick_cpu(4);
+            let cycles_before = rrt.cpu.cycles;
+            rrt.cpu.single_step();
+            let c = (rrt.cpu.cycles - cycles_before) as u32;
+            rrt.cpu.memory.tick_cpu(c);
         }
 
         assert_eq!(rrt.ram()[0x0050], i_ram_50);
@@ -528,13 +533,13 @@ mod tests {
         rt.add_block(0x8000, block_8000);
 
         // Manual dispatch: native at $8000, then interpreter at $8002
-        rt.cpu.pc = 0x8000;
+        rt.cpu.registers.program_counter = 0x8000;
         // First dispatch: native
         if let Some(&f) = rt.dispatch.get(&0x8000) {
             rt.native_state = NativeCpuState::from_cpu(&rt.cpu);
             let result = f(
                 &mut CompatRuntime::new_borrowed(
-                    &mut rt.bus,
+                    &mut rt.cpu.memory,
                     &mut *rt.ppu_sink,
                     &mut *rt.audio_sink,
                 ),
@@ -543,11 +548,13 @@ mod tests {
             rt.native_state.to_cpu(&mut rt.cpu);
             let next_pc = (result >> 16) as u16;
             if next_pc != 0 {
-                rt.cpu.pc = next_pc;
+                rt.cpu.registers.program_counter = next_pc;
             }
         }
         // Second dispatch: interpreter fallback at $8002
-        rt.cpu.step(&mut rt.bus); // STA $50 (A was set to $42 by native)
+        let cycles_before = rt.cpu.cycles;
+        rt.cpu.single_step(); // STA $50 (A was set to $42 by native)
+        rt.cpu.memory.tick_cpu((rt.cpu.cycles - cycles_before) as u32);
         assert_eq!(rt.ram()[0x0050], 0x42);
     }
 }

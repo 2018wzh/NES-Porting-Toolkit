@@ -123,13 +123,13 @@ impl GameHandlers for BattleCityGame {
         }
 
         // 同步输入状态到 NES 系统
-        self.system.bus.controller[0].set_current(*ctx.input_state);
+        self.system.cpu.memory.controller[0].set_current(*ctx.input_state);
 
         // 执行 NES 帧
         let fb = match self.exec_mode {
             ExecMode::Recompiled => {
                 if let Some(ref mut rt) = self.recompiled {
-                    rt.bus.controller[0].set_current(*ctx.input_state);
+                    rt.cpu.memory.controller[0].set_current(*ctx.input_state);
                     rt.run_frame();
                     *rt.framebuffer()
                 } else {
@@ -144,7 +144,7 @@ impl GameHandlers for BattleCityGame {
 
         // 音频混音
         if let Some(ref tx) = *ctx.audio_tx {
-            let apu = &self.system.bus.apu;
+            let apu = &self.system.cpu.memory.apu;
             let p1 = apu.pulse1_output();
             let p2 = apu.pulse2_output();
             let tri = apu.triangle_output();
@@ -165,7 +165,7 @@ impl GameHandlers for BattleCityGame {
         // 调试数据收集（发送到 FLTK 调试窗口）
         if *ctx.show_debug {
             let cpu = &self.system.cpu;
-            let ppu = &self.system.bus.ppu;
+            let ppu = &self.system.cpu.memory.ppu;
 
             let mut hash: u64 = 0;
             for (i, &b) in fb.iter().enumerate() {
@@ -176,17 +176,17 @@ impl GameHandlers for BattleCityGame {
             }
 
             ctx.debug_collector.update(DebugData {
-                cpu_a: cpu.a,
-                cpu_x: cpu.x,
-                cpu_y: cpu.y,
-                cpu_sp: cpu.sp,
-                cpu_pc: cpu.pc,
-                cpu_flag_c: cpu.status.carry,
-                cpu_flag_z: cpu.status.zero,
-                cpu_flag_i: cpu.status.interrupt_disable,
-                cpu_flag_d: cpu.status.decimal,
-                cpu_flag_v: cpu.status.overflow,
-                cpu_flag_n: cpu.status.negative,
+                cpu_a: cpu.registers.accumulator,
+                cpu_x: cpu.registers.index_x,
+                cpu_y: cpu.registers.index_y,
+                cpu_sp: cpu.registers.stack_pointer.0,
+                cpu_pc: cpu.registers.program_counter,
+                cpu_flag_c: cpu.registers.status.contains(nptk::cpu_ref::MosStatus::PS_CARRY),
+                cpu_flag_z: cpu.registers.status.contains(nptk::cpu_ref::MosStatus::PS_ZERO),
+                cpu_flag_i: cpu.registers.status.contains(nptk::cpu_ref::MosStatus::PS_DISABLE_INTERRUPTS),
+                cpu_flag_d: cpu.registers.status.contains(nptk::cpu_ref::MosStatus::PS_DECIMAL_MODE),
+                cpu_flag_v: cpu.registers.status.contains(nptk::cpu_ref::MosStatus::PS_OVERFLOW),
+                cpu_flag_n: cpu.registers.status.contains(nptk::cpu_ref::MosStatus::PS_NEGATIVE),
                 cpu_cycles: cpu.cycles,
                 cpu_cycle_count: self.system.cpu_cycle,
                 ppu_ctrl: ppu.ctrl,

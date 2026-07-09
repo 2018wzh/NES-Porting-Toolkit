@@ -21,6 +21,26 @@ use crate::controller::NesControllerPort;
 use crate::mapper::Cartridge;
 use crate::ppu_compat::PpuCompat;
 
+/// 实现 mos6502::memory::Bus — 使 NesBusImpl 可作为 mos6502 CPU 的内存总线
+///
+/// mos6502 的 CPU 通过 `get_byte`/`set_byte` 访问内存，
+/// 我们将其桥接到现有的 `cpu_read`/`cpu_write`。
+impl mos6502::memory::Bus for NesBusImpl {
+    fn get_byte(&mut self, address: u16) -> u8 {
+        self.cpu_read(address)
+    }
+
+    fn set_byte(&mut self, address: u16, value: u8) {
+        self.cpu_write(address, value);
+    }
+
+    /// mos6502 内部通过此方法检查 NMI 是否挂起。
+    /// PPU 在 VBlank 开始时设置 `has_nmi`，CPU 自动响应。
+    fn nmi_pending(&mut self) -> bool {
+        self.ppu.has_nmi
+    }
+}
+
 /// NesBus trait — 所有总线实现需实现此接口
 pub trait NesBus {
     fn cpu_read(&mut self, addr: u16) -> u8;

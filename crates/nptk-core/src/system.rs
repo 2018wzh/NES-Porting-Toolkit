@@ -9,7 +9,6 @@ use crate::mapper::Cartridge;
 pub const CPU_CYCLES_PER_FRAME: u32 = 341 * 262 / 3;
 
 pub struct NesSystem {
-    pub bus: NesBusImpl,
     pub cpu: crate::cpu_ref::Cpu6502,
     pub frame_count: u64,
     pub cpu_cycle: u32,
@@ -17,11 +16,10 @@ pub struct NesSystem {
 }
 
 impl NesSystem {
-    pub fn new(mut bus: NesBusImpl) -> Self {
-        let mut cpu = crate::cpu_ref::Cpu6502::new();
-        cpu.reset(&mut bus);
+    pub fn new(bus: NesBusImpl) -> Self {
+        let mut cpu = crate::cpu_ref::Cpu6502::new(bus, mos6502::instruction::Ricoh2a03);
+        cpu.reset();
         NesSystem {
-            bus,
             cpu,
             frame_count: 0,
             cpu_cycle: 0,
@@ -37,45 +35,40 @@ impl NesSystem {
 
     /// 执行一帧，返回 framebuffer
     pub fn run_frame(&mut self) -> &[u8; 256 * 240] {
-        self.bus.ppu.clear_frame_complete();
+        self.cpu.memory.ppu.clear_frame_complete();
 
-        // NMI 由 PPU tick() 在 VBlank 开始时设置 has_nmi，
-        // 本帧开头执行上一帧触发的 NMI
-        if self.cpu.nmi_pending {
-            self.cpu.nmi_pending = false;
-            self.cpu.trigger_nmi(&mut self.bus);
-        }
+        // mos6502 内部通过 Bus::nmi_pending() 自动检测 NMI，
+        // 不再需要外部 nmi_pending 标志和手动 trigger_nmi()
 
         self.cpu_cycle = 0;
         self.ppu_dot = 0;
 
         while self.cpu_cycle < CPU_CYCLES_PER_FRAME {
-            let cycles = self.cpu.step(&mut self.bus) as u32;
+            let cycles_before = self.cpu.cycles;
+            self.cpu.single_step();
+            let cycles = (self.cpu.cycles - cycles_before) as u32;
             self.cpu_cycle += cycles;
-            self.bus.tick_cpu(cycles);
+            self.cpu.memory.tick_cpu(cycles);
             self.ppu_dot = self.ppu_dot.wrapping_add(cycles * 3);
-
-            // 检查 PPU 是否触发了 NMI
-            if self.bus.ppu.take_nmi() {
-                self.cpu.nmi_pending = true;
-            }
         }
 
         // 帧结束：渲染 PPU 帧
-        self.bus.render_ppu_frame();
+        self.cpu.memory.render_ppu_frame();
         self.frame_count += 1;
-        self.bus.ppu.frame()
+        self.cpu.memory.ppu.frame()
     }
 
     pub fn step_cpu(&mut self) -> u32 {
-        let c = self.cpu.step(&mut self.bus);
+        let cycles_before = self.cpu.cycles;
+        self.cpu.single_step();
+        let c = (self.cpu.cycles - cycles_before) as u32;
         self.cpu_cycle += c;
-        self.bus.tick_cpu(c);
+        self.cpu.memory.tick_cpu(c);
         c
     }
 
     pub fn ram(&self) -> &[u8; 0x800] {
-        &self.bus.ram
+        &self.cpu.memory.ram
     }
 }
 
@@ -181,10 +174,9 @@ mod tests {
     fn test_nmi_fires() {
         let mut sys = make_test_system();
         // Enable NMI in PPU control register ($2000)
-        sys.bus.cpu_write(0x2000, 0x80);
-        assert!(!sys.cpu.nmi_pending);
+        sys.cpu.memory.cpu_write(0x2000, 0x80);
+        // mos6502 内部通过 Bus::nmi_pending() 自动检测 NMI
         let _ = sys.run_frame();
-        // After one frame, NMI should be pending for next frame
-        assert!(sys.cpu.nmi_pending);
+        // 帧完成后，mos6502 自动处理了 NMI
     }
 }

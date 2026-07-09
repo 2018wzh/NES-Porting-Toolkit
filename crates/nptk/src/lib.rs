@@ -48,6 +48,11 @@ pub mod system {
     pub use nptk_core::system::{CPU_CYCLES_PER_FRAME, NesSystem};
 }
 
+/// CPU 引用（mos6502 封装）
+pub mod cpu_ref {
+    pub use nptk_core::cpu_ref::{Cpu6502, CpuFlags, MosStatus, MosRicoh2a03};
+}
+
 /// 总线
 pub mod bus {
     pub use nptk_core::bus::NesBus;

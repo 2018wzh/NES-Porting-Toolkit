@@ -14,3 +14,4 @@ nptk-profile = { path = "../nptk-profile" }
 
 [dev-dependencies]
 nptk-recompiler = { path = "../nptk-recompiler" }
+nptk-mapper = { path = "../nptk-mapper" }

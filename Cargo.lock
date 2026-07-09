@@ -2072,6 +2072,7 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "mos6502",
+ "nptk-mapper",
  "nptk-profile",
  "serde",
  "serde_json",
@@ -2116,6 +2117,7 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "nptk-core",
+ "nptk-mapper",
  "nptk-profile",
  "nptk-recompiler",
  "serde",

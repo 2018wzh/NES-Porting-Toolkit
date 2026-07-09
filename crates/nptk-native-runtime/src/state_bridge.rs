@@ -41,14 +41,14 @@ impl SaveState {
         SaveState {
             version: 1,
             ram: system.ram().to_vec(),
-            pc: system.cpu.pc,
-            sp: system.cpu.sp,
-            a: system.cpu.a,
-            x: system.cpu.x,
-            y: system.cpu.y,
-            status: system.cpu.status.to_byte(),
-            ppu_ctrl: system.bus.ppu.ctrl,
-            ppu_mask: system.bus.ppu.mask,
+            pc: system.cpu.registers.program_counter,
+            sp: system.cpu.registers.stack_pointer.0,
+            a: system.cpu.registers.accumulator,
+            x: system.cpu.registers.index_x,
+            y: system.cpu.registers.index_y,
+            status: system.cpu.registers.status.bits(),
+            ppu_ctrl: system.cpu.memory.ppu.ctrl,
+            ppu_mask: system.cpu.memory.ppu.mask,
             frame_count: system.frame_count,
         }
     }
@@ -65,20 +65,15 @@ impl SaveState {
 
     /// 恢复到 NES 系统
     pub fn restore_to(&self, system: &mut nptk_core::system::NesSystem) {
-        system.cpu.a = self.a;
-        system.cpu.x = self.x;
-        system.cpu.y = self.y;
-        system.cpu.sp = self.sp;
-        system.cpu.pc = self.pc;
-        system.cpu.status.carry = self.status & 0x01 != 0;
-        system.cpu.status.zero = self.status & 0x02 != 0;
-        system.cpu.status.interrupt_disable = self.status & 0x04 != 0;
-        system.cpu.status.decimal = self.status & 0x08 != 0;
-        system.cpu.status.overflow = self.status & 0x40 != 0;
-        system.cpu.status.negative = self.status & 0x80 != 0;
-        system.bus.ram.copy_from_slice(&self.ram);
-        system.bus.ppu.ctrl = self.ppu_ctrl;
-        system.bus.ppu.mask = self.ppu_mask;
+        system.cpu.registers.accumulator = self.a;
+        system.cpu.registers.index_x = self.x;
+        system.cpu.registers.index_y = self.y;
+        system.cpu.registers.stack_pointer.0 = self.sp;
+        system.cpu.registers.program_counter = self.pc;
+        system.cpu.registers.status = nptk_core::cpu_ref::MosStatus::from_bits_truncate(self.status);
+        system.cpu.memory.ram.copy_from_slice(&self.ram);
+        system.cpu.memory.ppu.ctrl = self.ppu_ctrl;
+        system.cpu.memory.ppu.mask = self.ppu_mask;
         system.frame_count = self.frame_count;
     }
 }

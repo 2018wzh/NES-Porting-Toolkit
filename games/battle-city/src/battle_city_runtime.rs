@@ -13,6 +13,7 @@ pub struct BattleCityRuntime {
 
 impl BattleCityRuntime {
     pub fn new(rom: NesRom) -> Result<Self, Box<dyn std::error::Error>> {
+        nptk::mapper::init();
         let mapper =
             nptk::mapper::create_mapper(rom.header.mapper_id, &rom).expect("Mapper not registered");
         let cartridge = Cartridge::new_simple(
@@ -61,6 +62,7 @@ mod tests {
     }
 
     fn make_cartridge(rom: &NesRom) -> Cartridge {
+        nptk::mapper::init();
         let mapper =
             nptk::mapper::create_mapper(rom.header.mapper_id, rom).expect("Mapper not registered");
         Cartridge::new_simple(
@@ -156,7 +158,7 @@ mod tests {
         assert!(hash != 0, "Title screen should not be all black");
 
         // Check that rendering produced non-zero pixels
-        let ppu = &system.bus.ppu;
+        let ppu = &system.cpu.memory.ppu;
         let raw_fb = ppu.frame();
         let non_zero = raw_fb.iter().filter(|&&b| b != 0).count();
         assert!(
@@ -215,7 +217,7 @@ mod tests {
         let state = BattleCityStateView::new(system.ram());
         // At title screen: game_mode should be 0 (title), lives should be 0
         assert_eq!(state.game_mode(), 0, "Should be at title screen");
-        let fb = system.bus.ppu.frame();
+        let fb = system.cpu.memory.ppu.frame();
         let non_zero = fb.iter().filter(|&&b| b != 0).count();
         assert!(non_zero > 100, "Title screen should render visible content");
     }
