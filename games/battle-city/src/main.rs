@@ -150,7 +150,7 @@ impl GameHandlers for BattleCityGame {
             let tri = apu.triangle_output();
             let noise = apu.noise_output();
             ctx.apu_mixer
-                .mix(nptk::system::CPU_CYCLES_PER_FRAME, p1, p2, tri, noise);
+                .mix(nptk::system::CPU_CYCLES_PER_FRAME_MAX, p1, p2, tri, noise);
             let samples = ctx.apu_mixer.drain_samples();
             for s in samples {
                 let _ = tx.send(s);

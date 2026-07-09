@@ -123,7 +123,10 @@ impl BlarggRunner {
             let fail_code = status;
             self.result = Some(BlarggTestResult::Failed(
                 fail_code,
-                format!("Status=${:02X}, BG=${:02X}, Center=${:02X}", status, bg_color, center_pixel),
+                format!(
+                    "Status=${:02X}, BG=${:02X}, Center=${:02X}",
+                    status, bg_color, center_pixel
+                ),
             ));
             self.done = true;
         }
@@ -160,9 +163,12 @@ pub fn run_blargg_test(rom_path: &str, max_frames: u32) -> BlarggTestResult {
         Err(e) => return BlarggTestResult::Unknown(format!("Failed to create runner: {}", e)),
     };
     runner.run_all();
-    runner.result().cloned().unwrap_or(BlarggTestResult::Unknown(
-        "No result determined".to_string(),
-    ))
+    runner
+        .result()
+        .cloned()
+        .unwrap_or(BlarggTestResult::Unknown(
+            "No result determined".to_string(),
+        ))
 }
 
 #[cfg(test)]

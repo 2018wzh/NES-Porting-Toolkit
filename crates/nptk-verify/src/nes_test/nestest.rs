@@ -25,7 +25,7 @@
 
 use std::fmt::Write;
 
-use nptk_core::bus::{NesBus, NesBusImpl};
+use nptk_core::bus::NesBus;
 use nptk_core::cpu_ref::Cpu6502;
 
 use super::create_test_bus;

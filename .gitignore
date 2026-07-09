@@ -13,3 +13,4 @@ Thumbs.db
 .DS_Store
 
 generated/
+verify_output/

@@ -224,7 +224,7 @@ impl RecompiledRuntime {
         self.cpu_cycle = 0;
         let mut ppu_dot = 0u32;
 
-        while self.cpu_cycle < nptk_core::system::CPU_CYCLES_PER_FRAME {
+        while self.cpu_cycle < nptk_core::system::CPU_CYCLES_PER_FRAME_MAX {
             let pc = self.cpu.registers.program_counter;
 
             let cycles = if let Some(&native_fn) = self.dispatch.get(&pc) {

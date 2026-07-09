@@ -41,6 +41,7 @@ image = "0.25"
 mos6502 = "0.10"
 disasm6502 = "0.2"
 linkme = "0.3"
+tetanes-core = "0.14.2"
 
 # Cranelift AOT 编译
 cranelift-frontend = "0.133"

@@ -18,6 +18,7 @@ nptk-core = { path = "../nptk-core" }
 nptk-profile = { path = "../nptk-profile" }
 nptk-recompiler = { path = "../nptk-recompiler" }
 nptk-native-runtime = { path = "../nptk-native-runtime" }
+nptk-mapper = { path = "../nptk-mapper" }
 nptk-wgpu = { path = "../nptk-wgpu" }
 nptk-audio = { path = "../nptk-audio" }
 nptk-input = { path = "../nptk-input" }

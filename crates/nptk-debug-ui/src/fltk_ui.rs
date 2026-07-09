@@ -71,7 +71,7 @@ impl DebugWindowHandle {
 // ---------------------------------------------------------------------------
 // FLTK window internals
 // ---------------------------------------------------------------------------
-
+#[allow(unused)]
 struct DebugWidgets {
     // --- Top toolbar ---
     pause_btn: Button,
@@ -124,32 +124,32 @@ fn build_ui() -> (Window, DebugWidgets, Arc<Mutex<DebugUiState>>) {
     let mut win = Window::new(100, 100, WINDOW_W, WINDOW_H, "NES Debug UI");
 
     // ── Top toolbar ──────────────────────────────────────────────
-    let mut pause_btn = Button::new(10, 10, 80, 28, "Pause");
+    let pause_btn = Button::new(10, 10, 80, 28, "Pause");
     let mut step_btn = Button::new(96, 10, 90, 28, "Step Frame");
     step_btn.deactivate(); // disabled until paused
 
-    let mut fps_frame = Frame::new(200, 10, 100, 28, "FPS: --");
-    let mut frame_frame = Frame::new(310, 10, 120, 28, "Frame: --");
-    let mut hash_frame = Frame::new(440, 10, 200, 28, "");
+    let fps_frame = Frame::new(200, 10, 100, 28, "FPS: --");
+    let frame_frame = Frame::new(310, 10, 120, 28, "Frame: --");
+    let hash_frame = Frame::new(440, 10, 200, 28, "");
 
     // ── CPU panel (left column) ──────────────────────────────────
     let mut cpu_pack = Pack::new(10, 50, 240, 260, "CPU");
     cpu_pack.set_label("CPU");
     cpu_pack.set_frame(FrameType::DownBox);
 
-    let mut cpu_a = Frame::new(10, 50, 220, 20, "A:  --");
-    let mut cpu_x = Frame::new(10, 70, 220, 20, "X:  --");
-    let mut cpu_y = Frame::new(10, 90, 220, 20, "Y:  --");
-    let mut cpu_sp = Frame::new(10, 110, 220, 20, "SP: --");
-    let mut cpu_pc = Frame::new(10, 130, 220, 20, "PC: --");
-    let mut cpu_cycles = Frame::new(10, 150, 220, 20, "Cycles: --");
+    let cpu_a = Frame::new(10, 50, 220, 20, "A:  --");
+    let cpu_x = Frame::new(10, 70, 220, 20, "X:  --");
+    let cpu_y = Frame::new(10, 90, 220, 20, "Y:  --");
+    let cpu_sp = Frame::new(10, 110, 220, 20, "SP: --");
+    let cpu_pc = Frame::new(10, 130, 220, 20, "PC: --");
+    let cpu_cycles = Frame::new(10, 150, 220, 20, "Cycles: --");
 
-    let mut cpu_flag_c = Frame::new(10, 180, 70, 20, "C:0");
-    let mut cpu_flag_z = Frame::new(80, 180, 70, 20, "Z:0");
-    let mut cpu_flag_i = Frame::new(150, 180, 70, 20, "I:0");
-    let mut cpu_flag_d = Frame::new(10, 200, 70, 20, "D:0");
-    let mut cpu_flag_v = Frame::new(80, 200, 70, 20, "V:0");
-    let mut cpu_flag_n = Frame::new(150, 200, 70, 20, "N:0");
+    let cpu_flag_c = Frame::new(10, 180, 70, 20, "C:0");
+    let cpu_flag_z = Frame::new(80, 180, 70, 20, "Z:0");
+    let cpu_flag_i = Frame::new(150, 180, 70, 20, "I:0");
+    let cpu_flag_d = Frame::new(10, 200, 70, 20, "D:0");
+    let cpu_flag_v = Frame::new(80, 200, 70, 20, "V:0");
+    let cpu_flag_n = Frame::new(150, 200, 70, 20, "N:0");
 
     cpu_pack.end();
 
@@ -158,12 +158,12 @@ fn build_ui() -> (Window, DebugWidgets, Arc<Mutex<DebugUiState>>) {
     ppu_pack.set_label("PPU");
     ppu_pack.set_frame(FrameType::DownBox);
 
-    let mut ppu_ctrl = Frame::new(10, 320, 220, 20, "CTRL:   --");
-    let mut ppu_mask = Frame::new(10, 340, 220, 20, "MASK:   --");
-    let mut ppu_status = Frame::new(10, 360, 220, 20, "STATUS: --");
-    let mut ppu_scanline = Frame::new(10, 390, 220, 20, "Scanline: --");
-    let mut ppu_cycle = Frame::new(10, 410, 220, 20, "Cycle:    --");
-    let mut ppu_dot = Frame::new(10, 430, 220, 20, "Dot:      --");
+    let ppu_ctrl = Frame::new(10, 320, 220, 20, "CTRL:   --");
+    let ppu_mask = Frame::new(10, 340, 220, 20, "MASK:   --");
+    let ppu_status = Frame::new(10, 360, 220, 20, "STATUS: --");
+    let ppu_scanline = Frame::new(10, 390, 220, 20, "Scanline: --");
+    let ppu_cycle = Frame::new(10, 410, 220, 20, "Cycle:    --");
+    let ppu_dot = Frame::new(10, 430, 220, 20, "Dot:      --");
 
     ppu_pack.end();
 
@@ -172,13 +172,13 @@ fn build_ui() -> (Window, DebugWidgets, Arc<Mutex<DebugUiState>>) {
     ram_hex.set_frame(FrameType::DownBox);
     ram_hex.set_label_size(10);
 
-    let mut ram_nav_top = Button::new(270, 500, 80, 24, "Top");
-    let mut ram_nav_stack = Button::new(356, 500, 80, 24, "Stack");
-    let mut ram_nav_up = Button::new(442, 500, 80, 24, "Page Up");
-    let mut ram_nav_down = Button::new(528, 500, 80, 24, "Page Dn");
+    let ram_nav_top = Button::new(270, 500, 80, 24, "Top");
+    let ram_nav_stack = Button::new(356, 500, 80, 24, "Stack");
+    let ram_nav_up = Button::new(442, 500, 80, 24, "Page Up");
+    let ram_nav_down = Button::new(528, 500, 80, 24, "Page Dn");
 
-    let mut ram_search_input = Input::new(620, 500, 60, 24, "Go:$");
-    let mut ram_search_btn = Button::new(686, 500, 40, 24, "Go");
+    let ram_search_input = Input::new(620, 500, 60, 24, "Go:$");
+    let ram_search_btn = Button::new(686, 500, 40, 24, "Go");
 
     let mut ram_highlight_check = Button::new(270, 530, 140, 24, "Highlight changes");
     ram_highlight_check.set_type(fltk::button::ButtonType::Toggle);
@@ -186,7 +186,7 @@ fn build_ui() -> (Window, DebugWidgets, Arc<Mutex<DebugUiState>>) {
 
     // ── Input mapping (right side, placeholder) ──────────────────
     // For now, a simple frame; full input mapping editor will be added later.
-    let mut input_frame = Frame::new(270, 560, 530, 40, "Input: Save/Load mappings via RON");
+    let _input_frame = Frame::new(270, 560, 530, 40, "Input: Save/Load mappings via RON");
 
     win.end();
     win.show();

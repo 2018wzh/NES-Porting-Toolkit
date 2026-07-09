@@ -25,3 +25,5 @@
 pub mod compare;
 pub mod nes_test;
 pub mod report;
+pub mod tetanes_runner;
+pub mod tri_compare;

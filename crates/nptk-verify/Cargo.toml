@@ -17,3 +17,4 @@ nptk-native-runtime = { path = "../nptk-native-runtime" }
 nptk-mapper = { path = "../nptk-mapper" }
 nptk-profile = { path = "../nptk-profile" }
 nptk-input = { path = "../nptk-input" }
+tetanes-core = { workspace = true }

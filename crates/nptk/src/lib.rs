@@ -45,7 +45,7 @@ pub mod rom {
 
 /// NES 系统
 pub mod system {
-    pub use nptk_core::system::{CPU_CYCLES_PER_FRAME, NesSystem};
+    pub use nptk_core::system::{CPU_CYCLES_PER_FRAME_MAX, NesSystem};
 }
 
 /// CPU 引用（mos6502 封装）

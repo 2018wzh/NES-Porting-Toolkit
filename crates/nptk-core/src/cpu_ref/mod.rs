@@ -10,9 +10,9 @@ use mos6502::cpu;
 use mos6502::instruction::Ricoh2a03;
 use mos6502::registers::Status;
 
+pub use mos6502::instruction::Ricoh2a03 as MosRicoh2a03;
 /// 重新导出 mos6502 类型，供下游 crate 使用
 pub use mos6502::registers::Status as MosStatus;
-pub use mos6502::instruction::Ricoh2a03 as MosRicoh2a03;
 
 /// mos6502 CPU 类型别名 — 使用 NesBusImpl 作为内存总线，Ricoh2a03 作为 CPU 变体
 pub type Cpu6502 = cpu::CPU<NesBusImpl, Ricoh2a03>;

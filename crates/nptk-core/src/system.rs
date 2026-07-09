@@ -1,12 +1,17 @@
 //! NES 系统 — 帧循环、CPU/PPU/APU 同步
 //!
 //! NTSC NES 时序: 262 scanlines × 341 PPU dots = 89342 dots/frame
-//! PPU dot clock = 3 × CPU clock, CPU cycles/frame ≈ 29780
+//! PPU dot clock = 3 × CPU clock, CPU cycles/frame ≈ 29780.67
+//!
+//! 与 tetanes-core 对齐: 使用 PPU frame_complete 标志驱动帧循环，
+//! 而非固定 CPU 周期数。这样可以避免整数截断导致的累积误差。
 
 use crate::bus::{NesBus, NesBusImpl};
 use crate::mapper::Cartridge;
 
-pub const CPU_CYCLES_PER_FRAME: u32 = 341 * 262 / 3;
+/// 最大 CPU 周期数/帧（安全上限，防止死循环）
+/// 精确值 = 262 * 341 / 3 = 29780.666...，取 ceil 作为安全上限
+pub const CPU_CYCLES_PER_FRAME_MAX: u32 = 29781;
 
 pub struct NesSystem {
     pub cpu: crate::cpu_ref::Cpu6502,
@@ -34,16 +39,20 @@ impl NesSystem {
     }
 
     /// 执行一帧，返回 framebuffer
+    ///
+    /// 使用 PPU frame_complete 标志驱动帧循环（与 tetanes-core 的
+    /// clock_frame() 使用 frame_number() 变化检测类似）。
+    /// 这确保了精确的 262×341 PPU dots/帧时序。
     pub fn run_frame(&mut self) -> &[u8; 256 * 240] {
         self.cpu.memory.ppu.clear_frame_complete();
-
-        // mos6502 内部通过 Bus::nmi_pending() 自动检测 NMI，
-        // 不再需要外部 nmi_pending 标志和手动 trigger_nmi()
 
         self.cpu_cycle = 0;
         self.ppu_dot = 0;
 
-        while self.cpu_cycle < CPU_CYCLES_PER_FRAME {
+        // 循环直到 PPU 完成一帧（frame_complete 被 tick() 设置）
+        // 使用 CPU_CYCLES_PER_FRAME_MAX 作为安全上限
+        while !self.cpu.memory.ppu.get_frame_complete() && self.cpu_cycle < CPU_CYCLES_PER_FRAME_MAX
+        {
             let cycles_before = self.cpu.cycles;
             self.cpu.single_step();
             let cycles = (self.cpu.cycles - cycles_before) as u32;
